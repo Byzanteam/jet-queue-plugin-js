@@ -1,0 +1,16 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  "compilerOptions": {
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitOverride": true
+  },
+  "exclude": [
+    ".git"
+  ],
+  "tasks": {
+    "test": "deno test -A --allow-none --shuffle --parallel",
+    "check:types": "deno check **/*.ts",
+    "check": "deno fmt --check && deno lint && deno task check:types && deno task test"
+  }
+}
