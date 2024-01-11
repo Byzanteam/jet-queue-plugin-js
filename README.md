@@ -4,10 +4,10 @@ JS Client library to interact with Jet queue plugin.
 
 ## Usage
 
-Install it via [https://esm.sh](https://esm.sh/#importing-from-github-repos).
+Install it via [jsdelivr](https://www.jsdelivr.com).
 
 ```ts
-import { JetQueue } from "https://esm.sh/gh/Byzanteam/jet-queue-plugin-js/mod.ts";
+import { JetQueue } from "https://cdn.jsdelivr.net/gh/Byzanteam/jet-queue-plugin-js/mod.ts";
 ```
 
 Then you're able to interact with the queue.
