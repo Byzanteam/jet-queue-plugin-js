@@ -1,5 +1,4 @@
 type EnumToConst<T extends string> = `${T}`;
-type MaybeKeyof<T> = T extends undefined ? never : keyof T;
 
 export type QueueJobId = number;
 
