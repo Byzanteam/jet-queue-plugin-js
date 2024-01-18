@@ -2,6 +2,11 @@ type EnumToConst<T extends string> = `${T}`;
 
 export type QueueJobId = number;
 
+export interface EnqueueJobResponse {
+  id: QueueJobId;
+  is_conflict: boolean;
+}
+
 export interface QueueJob {
   id: QueueJobId;
   args: Readonly<Record<string, unknown>>;

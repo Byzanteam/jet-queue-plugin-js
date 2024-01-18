@@ -1,4 +1,9 @@
-import { EnqueueOptions, QueueJob, QueueJobId } from "./types.ts";
+import {
+  EnqueueJobResponse,
+  EnqueueOptions,
+  QueueJob,
+  QueueJobId,
+} from "./types.ts";
 
 export interface JetQueueOptions {
   instanceName: string;
@@ -103,18 +108,16 @@ export class JetQueue {
   >(
     args: Readonly<A>,
     options?: Partial<EnqueueOptions<keyof A & string, M>>,
-  ): Promise<QueueJobId> {
+  ): Promise<EnqueueJobResponse> {
     const { queue = this.queue, ...opts } = options ?? {};
 
-    const resp = await this.post<{ id: QueueJobId }>("/jobs", {
+    return await this.post<EnqueueJobResponse>("/jobs", {
       args,
       options: {
         queue,
         ...opts,
       },
     });
-
-    return resp.id;
   }
 
   /**
