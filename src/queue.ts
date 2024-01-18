@@ -1,8 +1,4 @@
-import {
-  EnqueueJobResponse,
-  EnqueueOptions,
-  QueueJob,
-} from "./types.ts";
+import { EnqueueJobResponse, EnqueueOptions, QueueJob } from "./types.ts";
 
 export interface JetQueueOptions {
   instanceName: string;
