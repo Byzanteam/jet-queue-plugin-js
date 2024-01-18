@@ -1,7 +1,13 @@
 import { EnqueueJobResponse, EnqueueOptions, QueueJob } from "./types.ts";
+import { listen } from "./ws-event-generator.ts";
 
 export interface JetQueueOptions {
   instanceName: string;
+}
+
+interface PushMessage {
+  type: "push";
+  payload: Array<QueueJob>;
 }
 
 export class JetQueue {
@@ -128,12 +134,19 @@ export class JetQueue {
    * }
    *  ```
    */
-  async *listen(): AsyncGenerator<QueueJob> {
-    // TODO: implement
-    yield await Promise.resolve({
-      id: 1,
-      args: {},
-    });
+  async *listen(): AsyncIterable<QueueJob> {
+    const endpoint = await this.pluginInstance.getEndpoint("/api");
+    endpoint.protocol = "ws:";
+    const socket = new WebSocket(endpoint);
+
+    for await (const { type, event } of listen<string>(socket)) {
+      if ("message" === type) {
+        const message: PushMessage = JSON.parse(event.data);
+        yield* message.payload;
+      } else {
+        return;
+      }
+    }
   }
 
   private async post<T>(path: string, body: object): Promise<T> {
