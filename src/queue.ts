@@ -2,7 +2,6 @@ import {
   EnqueueJobResponse,
   EnqueueOptions,
   QueueJob,
-  QueueJobId,
 } from "./types.ts";
 
 export interface JetQueueOptions {
