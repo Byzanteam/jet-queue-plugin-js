@@ -3,7 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "useUnknownInCatchVariables": true,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "types": [
+      "https://cdn.jsdelivr.net/gh/Byzanteam/breeze-ts-types@latest/mod.d.ts"
+    ]
   },
   "exclude": [
     ".git"
