@@ -1,69 +1,27 @@
-type ListenEvent<E> =
-  | {
-    type: "message";
-    event: MessageEvent<E>;
-  }
-  | {
-    type: "close";
-    event: CloseEvent;
-  }
-  | {
-    type: "error";
-    event: Event | ErrorEvent;
-  };
-
 export async function* listen<E>(
   socket: WebSocket,
-): AsyncIterable<ListenEvent<E>> {
-  const pullQueue: Array<(event: ListenEvent<E>) => void> = [];
-  const pushQueue: Array<ListenEvent<E>> = [];
+): AsyncIterable<MessageEvent<E>> {
+  const waitList: Array<(event: MessageEvent<E>) => void> = [];
+  const buffer: Array<MessageEvent<E>> = [];
 
-  let listening = true;
-
-  function pushEvent(event: ListenEvent<E>) {
-    if (0 === pullQueue.length) {
-      pushQueue.push(event);
+  function pushEvent(event: MessageEvent<E>) {
+    if (0 === waitList.length) {
+      buffer.push(event);
     } else {
-      const resolver = pullQueue.shift()!;
+      const resolver = waitList.shift()!;
       resolver(event);
     }
   }
 
-  function handleMessage(event: MessageEvent) {
-    pushEvent({ type: "message", event });
-  }
+  socket.addEventListener("message", pushEvent);
 
-  function handleError(event: Event | ErrorEvent) {
-    pushEvent({ type: "error", event });
-    stopListening();
-  }
-
-  function handleClose(event: CloseEvent) {
-    pushEvent({ type: "close", event });
-    stopListening();
-  }
-
-  function stopListening() {
-    socket.removeEventListener("message", handleMessage);
-    socket.removeEventListener("error", handleError);
-    socket.removeEventListener("close", handleClose);
-
-    listening = false;
-  }
-
-  socket.addEventListener("message", handleMessage);
-  socket.addEventListener("error", handleError);
-  socket.addEventListener("close", handleClose);
-
-  // 即使出现错误或者断连了，pushQueue 中未处理的消息仍然需要 yield 出去
-  // 包括错误和断连产生的 Event | ErrorEvent | CloseEvent
-  while (listening || pushQueue.length > 0) {
-    if (0 === pushQueue.length) {
-      await new Promise<ListenEvent<E>>((resolve) => {
-        pullQueue.push(resolve);
+  while (true) {
+    if (0 === buffer.length) {
+      await new Promise<MessageEvent<E>>((resolve) => {
+        waitList.push(resolve);
       });
     } else {
-      yield pushQueue.shift()!;
+      yield buffer.shift()!;
     }
   }
 }

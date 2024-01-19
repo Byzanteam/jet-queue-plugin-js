@@ -1,5 +1,9 @@
 type EnumToConst<T extends string> = `${T}`;
 
+export interface JetQueueOptions {
+  instanceName: string;
+}
+
 export type QueueJobId = number;
 
 export interface EnqueueJobResponse {
@@ -98,3 +102,36 @@ export enum JobState {
   Discarded = "discarded",
   Cancelled = "cancelled",
 }
+
+export interface ListenPerformOptions {
+  ack: (message: AckMessage) => void;
+}
+
+export type ListenPerform = (
+  jobs: ReadonlyArray<QueueJob>,
+  options: ListenPerformOptions,
+) => Promise<void>;
+
+export interface ListenOptions {
+  queue: string;
+  batchSize: number;
+  bufferSize: number;
+}
+
+export interface JobMessage {
+  type: "job";
+  payload: Array<QueueJob>;
+}
+
+export interface AckMessage {
+  type: "ack";
+  payload: Array<AckMessagePayload>;
+}
+
+type AckMessagePayload =
+  | { id: QueueJobId; code: "ok" }
+  | {
+    id: QueueJobId;
+    code: "error" | "cancel" | "discard" | "snooze";
+    data?: string;
+  };

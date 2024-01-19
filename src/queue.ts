@@ -1,14 +1,14 @@
-import { EnqueueJobResponse, EnqueueOptions, QueueJob } from "./types.ts";
+import {
+  AckMessage,
+  EnqueueJobResponse,
+  EnqueueOptions,
+  JetQueueOptions,
+  JobMessage,
+  ListenOptions,
+  ListenPerform,
+  QueueJob,
+} from "./types.ts";
 import { listen } from "./ws-event-generator.ts";
-
-export interface JetQueueOptions {
-  instanceName: string;
-}
-
-interface PushMessage {
-  type: "push";
-  payload: Array<QueueJob>;
-}
 
 export class JetQueue {
   private pluginInstance: BreezeRuntime.Plugin;
@@ -121,34 +121,6 @@ export class JetQueue {
     });
   }
 
-  /**
-   * Listen for jobs.
-   *
-   * @returns An async iterator of jobs
-   *
-   * @example
-   * ```ts
-   * const queue = new JetQueue('default');
-   * for await (const job of queue.listen()) {
-   *   console.log(job);
-   * }
-   *  ```
-   */
-  async *listen(): AsyncIterable<QueueJob> {
-    const endpoint = await this.pluginInstance.getEndpoint("/api");
-    endpoint.protocol = "ws:";
-    const socket = new WebSocket(endpoint);
-
-    for await (const { type, event } of listen<string>(socket)) {
-      if ("message" === type) {
-        const message: PushMessage = JSON.parse(event.data);
-        yield* message.payload;
-      } else {
-        return;
-      }
-    }
-  }
-
   private async post<T>(path: string, body: object): Promise<T> {
     const endpoint = await this.pluginInstance.getEndpoint(`/api${path}`);
 
@@ -163,5 +135,140 @@ export class JetQueue {
       const errorBody = await response.json();
       throw new Error("Request failed", { cause: errorBody });
     }
+  }
+
+  /**
+   * Listen for jobs.
+   *
+   * @returns An async iterator of jobs
+   *
+   * @example
+   * ```ts
+   * const queue = new JetQueue('default');
+   * for await (const job of queue.listen()) {
+   *   console.log(job);
+   * }
+   *  ```
+   */
+  async listen(perform: ListenPerform, options: ListenOptions): Promise<void> {
+    const socket = await this.listenSocket(options);
+
+    function ack(message: AckMessage) {
+      socket.send(JSON.stringify(message));
+    }
+
+    for await (
+      const jobs of chunk(
+        this.listenQueueJobs(socket),
+        options.batchSize,
+        100,
+      )
+    ) {
+      await perform(jobs, { ack });
+    }
+  }
+
+  private async listenSocket(options: ListenOptions): Promise<WebSocket> {
+    const { queue, bufferSize } = options;
+
+    const endpoint = await this.pluginInstance.getEndpoint("/api");
+
+    endpoint.search = new URLSearchParams({
+      queue,
+      size: bufferSize.toString(),
+    }).toString();
+
+    switch (endpoint.protocol) {
+      case "http":
+        endpoint.protocol = "ws";
+        break;
+
+      case "https":
+        endpoint.protocol = "wss";
+        break;
+
+      default:
+        break;
+    }
+
+    const socket = new WebSocket(endpoint);
+
+    return socket;
+  }
+
+  private async *listenQueueJobs(socket: WebSocket): AsyncIterable<QueueJob> {
+    let pong = true;
+
+    (function ping() {
+      if (pong) {
+        pong = false;
+        socket.send("ping");
+        setTimeout(ping, 1_000);
+      } else {
+        throw new Error("Ping timeout");
+      }
+    })();
+
+    for await (const { data } of listen<string>(socket)) {
+      const message = this.parseMessageData(data);
+
+      if ("pong" === message) {
+        pong = true;
+      } else {
+        yield* message.payload;
+      }
+    }
+  }
+
+  private parseMessageData(data: string): "pong" | JobMessage {
+    if ("pong" === data) {
+      return data;
+    } else {
+      return JSON.parse(data);
+    }
+  }
+}
+
+async function* chunk<T>(
+  iterable: AsyncIterable<T>,
+  size: number,
+  timeout: number,
+): AsyncIterable<Array<T>> {
+  const iterator = iterable[Symbol.asyncIterator]();
+  const buffer: Array<T> = [];
+
+  async function takeSize(): Promise<Array<T>> {
+    while (buffer.length < size) {
+      const result = await Promise.race([
+        new Promise<void>((resolve) => setTimeout(resolve, timeout)),
+        iterator.next().then((elem) => {
+          buffer.push(elem.value);
+          return elem;
+        }),
+      ]);
+
+      // 超时了
+      if (!result) break;
+
+      if (buffer.length === size) {
+        break;
+      }
+    }
+
+    return transfer<T>(buffer, Math.min(buffer.length, size));
+  }
+
+  function transfer<K>(arr: Array<K>, size: number): Array<K> {
+    const result: Array<K> = [];
+
+    for (let i = 0; i < size; i++) {
+      result.push(arr.shift()!);
+    }
+
+    return result;
+  }
+
+  while (true) {
+    yield takeSize();
   }
 }
