@@ -118,7 +118,7 @@ export interface ListenOptions {
   bufferSize: number;
 }
 
-export interface JobMessage {
+export interface JobsMessage {
   type: "job";
   payload: Array<QueueJob>;
 }
