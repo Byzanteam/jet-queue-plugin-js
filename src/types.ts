@@ -130,8 +130,6 @@ export interface AckMessage {
 
 type AckMessagePayload =
   | { id: QueueJobId; code: "ok" }
-  | {
-    id: QueueJobId;
-    code: "error" | "cancel" | "discard" | "snooze";
-    data?: string;
-  };
+  | { id: QueueJobId; code: "error" | "cancel"; data: string }
+  | { id: QueueJobId; code: "discard"; data?: string }
+  | { id: QueueJobId; code: "snooze"; data: number };
