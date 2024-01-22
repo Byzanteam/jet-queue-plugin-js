@@ -118,7 +118,7 @@ export interface ListenOptions {
   bufferSize: number;
 }
 
-export interface JobMessage {
+export interface JobsMessage {
   type: "job";
   payload: Array<QueueJob>;
 }
@@ -130,8 +130,6 @@ export interface AckMessage {
 
 type AckMessagePayload =
   | { id: QueueJobId; code: "ok" }
-  | {
-    id: QueueJobId;
-    code: "error" | "cancel" | "discard" | "snooze";
-    data?: string;
-  };
+  | { id: QueueJobId; code: "error" | "cancel"; data: string }
+  | { id: QueueJobId; code: "discard"; data?: string }
+  | { id: QueueJobId; code: "snooze"; data: number };

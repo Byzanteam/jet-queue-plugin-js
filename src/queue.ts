@@ -3,7 +3,7 @@ import {
   EnqueueJobResponse,
   EnqueueOptions,
   JetQueueOptions,
-  JobMessage,
+  JobsMessage,
   ListenOptions,
   ListenPerform,
   QueueJob,
@@ -220,7 +220,7 @@ export class JetQueue {
     }
   }
 
-  private parseMessageData(data: string): "pong" | JobMessage {
+  private parseMessageData(data: string): "pong" | JobsMessage {
     if ("pong" === data) {
       return data;
     } else {
