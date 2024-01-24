@@ -108,7 +108,7 @@ export type ListenPerform = (
 ) => Promise<void>;
 
 export interface ListenOptions {
-  /** the maximum number of jobs can be recevied in the perform function */
+  /** the maximum number of jobs can be received in the perform function */
   batchSize: number;
   /** the maximum number of jobs can be transmitted in the current socket and stored in buffer */
   bufferSize: number;
