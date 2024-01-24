@@ -182,7 +182,7 @@ export class JetQueue {
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
     const { bufferSize } = options;
 
-    const endpoint = await this.pluginInstance.getEndpoint("/api");
+    const endpoint = await this.pluginInstance.getEndpoint();
 
     endpoint.search = new URLSearchParams({
       queue: this.queue,
