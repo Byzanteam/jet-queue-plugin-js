@@ -148,10 +148,10 @@ export class JetQueue {
    * ```ts
    * const queue = new JetQueue('default');
    *
-   * async function perform(
+   * function perform(
    *   jobs: ReadonlyArray<QueueJob>,
    *   options: ListenPerformOptions
-   * ) {
+   * ): Promise<void> {
    *   const { ack } = options;
    *
    *   for (const job of jobs) {
@@ -162,6 +162,8 @@ export class JetQueue {
    *       payload: [{ id: job.id, code: "ok" }]
    *     });
    *   }
+   *
+   *   return Promise.resolve();
    * }
    *
    * await queue.listen(perform, { batchSize: 10, bufferSize: 20 });
