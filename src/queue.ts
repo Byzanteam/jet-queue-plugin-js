@@ -38,12 +38,6 @@ export class JetQueue {
    * await queue.enqueue({ id: 1, user_id: 2 });
    * ```
    *
-   * Enqueue a job with the `specified` queue other than `default`:
-   * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
-   * await queue.enqueue({ id: 1, user_id: 2 }, { queue: "specified" });
-   * ```
-   *
    * Schedule a job to run in 5 minutes:
    * ```ts
    * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
@@ -110,13 +104,11 @@ export class JetQueue {
     args: Readonly<A>,
     options?: Partial<EnqueueOptions<keyof A & string, M>>,
   ): Promise<EnqueueJobResponse> {
-    const { queue = this.queue, ...opts } = options ?? {};
-
     return await this.post<EnqueueJobResponse>("/jobs", {
       args,
       options: {
-        queue,
-        ...opts,
+        queue: this.queue,
+        ...options,
       },
     });
   }
@@ -188,12 +180,12 @@ export class JetQueue {
   }
 
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
-    const { queue = this.queue, bufferSize } = options;
+    const { bufferSize } = options;
 
     const endpoint = await this.pluginInstance.getEndpoint("/api");
 
     endpoint.search = new URLSearchParams({
-      queue,
+      queue: this.queue,
       size: bufferSize.toString(),
     }).toString();
 
