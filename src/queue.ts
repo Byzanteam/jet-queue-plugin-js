@@ -122,7 +122,7 @@ export class JetQueue {
   }
 
   private async post<T>(path: string, body: object): Promise<T> {
-    const endpoint = await this.pluginInstance.getEndpoint(`/api${path}`);
+    const endpoint = await this.pluginInstance.getEndpoint(path);
 
     const response = await fetch(endpoint, {
       method: "POST",
