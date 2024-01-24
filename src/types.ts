@@ -113,7 +113,7 @@ export type ListenPerform = (
 ) => Promise<void>;
 
 export interface ListenOptions {
-  queue: string;
+  queue?: string;
   batchSize: number;
   bufferSize: number;
 }

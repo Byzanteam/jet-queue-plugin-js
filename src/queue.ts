@@ -140,14 +140,31 @@ export class JetQueue {
   /**
    * Listen for jobs.
    *
+   * @param perform - An async function that handles incoming jobs
+   * @param options - The options for listening
    * @returns An async iterator of jobs
    *
    * @example
    * ```ts
    * const queue = new JetQueue('default');
-   * for await (const job of queue.listen()) {
-   *   console.log(job);
+   *
+   * async function perform(
+   *   jobs: ReadonlyArray<QueueJob>,
+   *   options: ListenPerformOptions
+   * ) {
+   *   const { ack } = options;
+   *
+   *   for (const job of jobs) {
+   *     console.log(job);
+   *
+   *     ack({
+   *       type: "ack",
+   *       payload: [{ id: job.id, code: "ok" }]
+   *     });
+   *   }
    * }
+   *
+   * await queue.listen(perform, { batchSize: 10, bufferSize: 20 });
    *  ```
    */
   async listen(perform: ListenPerform, options: ListenOptions): Promise<void> {
@@ -169,7 +186,7 @@ export class JetQueue {
   }
 
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
-    const { queue, bufferSize } = options;
+    const { queue = this.queue, bufferSize } = options;
 
     const endpoint = await this.pluginInstance.getEndpoint("/api");
 
