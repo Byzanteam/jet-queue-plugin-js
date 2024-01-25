@@ -37,11 +37,6 @@ export interface EnqueueOptions<
   AK extends string,
   M extends Record<string, unknown> | undefined,
 > {
-  /** a named queue to push the job into.
-   * Jobs may be pushed into any queue,
-   * regardless of whether jobs are currently being processed for the queue. */
-  queue: string;
-
   /** the maximum number of times a job can be retried
    * if there are errors during execution */
   maxAttempts: number;
@@ -113,8 +108,9 @@ export type ListenPerform = (
 ) => Promise<void>;
 
 export interface ListenOptions {
-  queue: string;
+  /** the maximum number of jobs can be received in the perform function */
   batchSize: number;
+  /** the maximum number of jobs can be transmitted in the current socket and stored in buffer */
   bufferSize: number;
 }
 

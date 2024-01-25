@@ -38,12 +38,6 @@ export class JetQueue {
    * await queue.enqueue({ id: 1, user_id: 2 });
    * ```
    *
-   * Enqueue a job with the `specified` queue other than `default`:
-   * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
-   * await queue.enqueue({ id: 1, user_id: 2 }, { queue: "specified" });
-   * ```
-   *
    * Schedule a job to run in 5 minutes:
    * ```ts
    * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
@@ -110,19 +104,17 @@ export class JetQueue {
     args: Readonly<A>,
     options?: Partial<EnqueueOptions<keyof A & string, M>>,
   ): Promise<EnqueueJobResponse> {
-    const { queue = this.queue, ...opts } = options ?? {};
-
     return await this.post<EnqueueJobResponse>("/jobs", {
       args,
       options: {
-        queue,
-        ...opts,
+        queue: this.queue,
+        ...options,
       },
     });
   }
 
   private async post<T>(path: string, body: object): Promise<T> {
-    const endpoint = await this.pluginInstance.getEndpoint(`/api${path}`);
+    const endpoint = await this.pluginInstance.getEndpoint(path);
 
     const response = await fetch(endpoint, {
       method: "POST",
@@ -140,14 +132,33 @@ export class JetQueue {
   /**
    * Listen for jobs.
    *
+   * @param perform - An async function that handles incoming jobs
+   * @param options - The options for listening
    * @returns An async iterator of jobs
    *
    * @example
    * ```ts
    * const queue = new JetQueue('default');
-   * for await (const job of queue.listen()) {
-   *   console.log(job);
+   *
+   * function perform(
+   *   jobs: ReadonlyArray<QueueJob>,
+   *   options: ListenPerformOptions
+   * ): Promise<void> {
+   *   const { ack } = options;
+   *
+   *   for (const job of jobs) {
+   *     console.log(job);
+   *
+   *     ack({
+   *       type: "ack",
+   *       payload: [{ id: job.id, code: "ok" }]
+   *     });
+   *   }
+   *
+   *   return Promise.resolve();
    * }
+   *
+   * await queue.listen(perform, { batchSize: 10, bufferSize: 20 });
    *  ```
    */
   async listen(perform: ListenPerform, options: ListenOptions): Promise<void> {
@@ -169,12 +180,12 @@ export class JetQueue {
   }
 
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
-    const { queue, bufferSize } = options;
+    const { bufferSize } = options;
 
-    const endpoint = await this.pluginInstance.getEndpoint("/api");
+    const endpoint = await this.pluginInstance.getEndpoint();
 
     endpoint.search = new URLSearchParams({
-      queue,
+      queue: this.queue,
       size: bufferSize.toString(),
     }).toString();
 
