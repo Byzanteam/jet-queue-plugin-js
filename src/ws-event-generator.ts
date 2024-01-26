@@ -16,12 +16,12 @@ export async function* listen<E>(
   socket.addEventListener("message", pushEvent);
 
   while (true) {
-    if (0 === buffer.length) {
-      await new Promise<MessageEvent<E>>((resolve) => {
+    yield await new Promise<MessageEvent<E>>((resolve) => {
+      if (0 === buffer.length) {
         waitList.push(resolve);
-      });
-    } else {
-      yield buffer.shift()!;
-    }
+      } else {
+        resolve(buffer.shift()!);
+      }
+    });
   }
 }

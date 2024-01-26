@@ -118,6 +118,10 @@ export class JetQueue {
 
     const response = await fetch(endpoint, {
       method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(body),
     });
 
@@ -167,7 +171,6 @@ export class JetQueue {
     function ack(message: AckMessage) {
       socket.send(JSON.stringify(message));
     }
-
     for await (
       const jobs of chunk(
         this.listenQueueJobs(socket),
@@ -182,43 +185,30 @@ export class JetQueue {
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
     const { bufferSize } = options;
 
-    const endpoint = await this.pluginInstance.getEndpoint();
+    const endpoint = await this.pluginInstance.getEndpoint("/websocket");
 
     endpoint.search = new URLSearchParams({
       queue: this.queue,
       size: bufferSize.toString(),
     }).toString();
 
-    switch (endpoint.protocol) {
-      case "http":
-        endpoint.protocol = "ws";
-        break;
-
-      case "https":
-        endpoint.protocol = "wss";
-        break;
-
-      default:
-        break;
-    }
-
-    const socket = new WebSocket(endpoint);
-
-    return socket;
+    return new WebSocket(endpoint);
   }
 
   private async *listenQueueJobs(socket: WebSocket): AsyncIterable<QueueJob> {
     let pong = true;
 
-    (function ping() {
-      if (pong) {
-        pong = false;
-        socket.send("ping");
-        setTimeout(ping, 1_000);
-      } else {
-        throw new Error("Ping timeout");
-      }
-    })();
+    socket.addEventListener("open", () => {
+      (function ping() {
+        if (pong) {
+          pong = false;
+          socket.send("ping");
+          setTimeout(ping, 1_000);
+        } else {
+          throw new Error("Ping timeout");
+        }
+      })();
+    });
 
     for await (const { data } of listen<string>(socket)) {
       const message = this.parseMessageData(data);
