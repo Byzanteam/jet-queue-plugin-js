@@ -5,26 +5,40 @@ export async function* listen<E, D>(
   dataBuilder: (event: MessageEvent<E>) => Array<D>,
 ): AsyncIterable<Array<D>> {
   const buffer: Array<D> = [];
-  let resolver: (() => void) | undefined = undefined;
+
+  let beginResolver: (() => void) | undefined = undefined;
+  let commitResolver: (() => void) | undefined = undefined;
 
   function pushEvent(event: MessageEvent<E>) {
+    if (beginResolver) {
+      beginResolver();
+    }
+
     buffer.push(...dataBuilder(event));
 
-    if (resolver && buffer.length >= batchSize) {
-      const oldResolver = resolver;
-      resolver = undefined;
-      oldResolver();
+    if (commitResolver && buffer.length >= batchSize) {
+      const oldCommitResolver = commitResolver;
+      commitResolver = undefined;
+      oldCommitResolver();
     }
   }
 
   socket.addEventListener("message", pushEvent);
 
   while (true) {
+    const commit = new Promise<void>((resolve) => {
+      commitResolver = resolve;
+    });
+
+    await new Promise<void>((resolve) => {
+      beginResolver = resolve;
+    });
+
+    beginResolver = undefined;
+
     await Promise.race([
       new Promise<void>((resolve) => setTimeout(resolve, batchTimeout)),
-      new Promise<void>((resolve) => {
-        resolver = resolve;
-      }),
+      commit,
     ]);
 
     if (0 !== buffer.length) {
