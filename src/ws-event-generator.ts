@@ -1,27 +1,44 @@
-export async function* listen<E>(
+export async function* listen<E, D>(
   socket: WebSocket,
-): AsyncIterable<MessageEvent<E>> {
-  const waitList: Array<(event: MessageEvent<E>) => void> = [];
-  const buffer: Array<MessageEvent<E>> = [];
+  batchSize: number,
+  batchTimeout: number,
+  dataBuilder: (event: MessageEvent<E>) => Array<D>,
+): AsyncIterable<Array<D>> {
+  const buffer: Array<D> = [];
+  let resolver: (() => void) | undefined = undefined;
 
   function pushEvent(event: MessageEvent<E>) {
-    if (0 === waitList.length) {
-      buffer.push(event);
-    } else {
-      const resolver = waitList.shift()!;
-      resolver(event);
+    buffer.push(...dataBuilder(event));
+
+    if (resolver && buffer.length >= batchSize) {
+      const oldResolver = resolver;
+      resolver = undefined;
+      oldResolver();
     }
   }
 
   socket.addEventListener("message", pushEvent);
 
   while (true) {
-    yield await new Promise<MessageEvent<E>>((resolve) => {
-      if (0 === buffer.length) {
-        waitList.push(resolve);
-      } else {
-        resolve(buffer.shift()!);
-      }
-    });
+    await Promise.race([
+      new Promise<void>((resolve) => setTimeout(resolve, batchTimeout)),
+      new Promise<void>((resolve) => {
+        resolver = resolve;
+      }),
+    ]);
+
+    if (0 !== buffer.length) {
+      yield transfer(buffer, Math.min(buffer.length, batchSize));
+    }
   }
+}
+
+function transfer<T>(arr: Array<T>, size: number): Array<T> {
+  const result: Array<T> = [];
+
+  for (let i = 0; i < size; i++) {
+    result.push(arr.shift()!);
+  }
+
+  return result;
 }

@@ -171,11 +171,13 @@ export class JetQueue {
     function ack(message: AckMessage) {
       socket.send(JSON.stringify(message));
     }
+
     for await (
-      const jobs of chunk(
-        this.listenQueueJobs(socket),
+      const jobs of listen<string, QueueJob>(
+        socket,
         options.batchSize,
         100,
+        (event: MessageEvent<string>) => this.parseMessageData(event.data),
       )
     ) {
       await perform(jobs, { ack });
@@ -192,10 +194,8 @@ export class JetQueue {
       size: bufferSize.toString(),
     }).toString();
 
-    return new WebSocket(endpoint);
-  }
+    const socket = new WebSocket(endpoint);
 
-  private async *listenQueueJobs(socket: WebSocket): AsyncIterable<QueueJob> {
     let pong = true;
 
     socket.addEventListener("open", () => {
@@ -210,66 +210,21 @@ export class JetQueue {
       })();
     });
 
-    for await (const { data } of listen<string>(socket)) {
-      const message = this.parseMessageData(data);
-
-      if ("pong" === message) {
+    socket.addEventListener("message", (event: MessageEvent<string>) => {
+      if ("pong" === event.data) {
         pong = true;
-      } else {
-        yield* message.payload;
       }
-    }
+    });
+
+    return socket;
   }
 
-  private parseMessageData(data: string): "pong" | JobsMessage {
+  private parseMessageData(data: string): Array<QueueJob> {
     if ("pong" === data) {
-      return data;
+      return [];
     } else {
-      return JSON.parse(data);
+      const message: JobsMessage = JSON.parse(data);
+      return message.payload;
     }
-  }
-}
-
-async function* chunk<T>(
-  iterable: AsyncIterable<T>,
-  size: number,
-  timeout: number,
-): AsyncIterable<Array<T>> {
-  const iterator = iterable[Symbol.asyncIterator]();
-  const buffer: Array<T> = [];
-
-  async function takeSize(): Promise<Array<T>> {
-    while (buffer.length < size) {
-      const result = await Promise.race([
-        new Promise<void>((resolve) => setTimeout(resolve, timeout)),
-        iterator.next().then((elem) => {
-          buffer.push(elem.value);
-          return elem;
-        }),
-      ]);
-
-      // 超时了
-      if (!result) break;
-
-      if (buffer.length === size) {
-        break;
-      }
-    }
-
-    return transfer<T>(buffer, Math.min(buffer.length, size));
-  }
-
-  function transfer<K>(arr: Array<K>, size: number): Array<K> {
-    const result: Array<K> = [];
-
-    for (let i = 0; i < size; i++) {
-      result.push(arr.shift()!);
-    }
-
-    return result;
-  }
-
-  while (true) {
-    yield takeSize();
   }
 }
