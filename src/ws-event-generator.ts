@@ -1,15 +1,24 @@
-export async function* listen<E, D>(
+export interface MessagesStreamOptions<T> {
+  timeout: number;
+  batchSize: number;
+  batchTimeout: number;
+  dataBuilder: (event: MessageEvent<string>) => Array<T>;
+}
+
+export async function* messagesStream<T>(
   socket: WebSocket,
-  batchSize: number,
-  batchTimeout: number,
-  dataBuilder: (event: MessageEvent<E>) => Array<D>,
-): AsyncIterable<Array<D>> {
-  const buffer: Array<D> = [];
+  options: MessagesStreamOptions<T>,
+): AsyncIterable<Array<T>> {
+  const { timeout, batchSize, batchTimeout, dataBuilder } = options;
+
+  const buffer: Array<T> = [];
+
+  let pong = true;
 
   let beginResolver: (() => void) | undefined = undefined;
   let commitResolver: (() => void) | undefined = undefined;
 
-  function pushEvent(event: MessageEvent<E>) {
+  function pushEvent(event: MessageEvent<string>) {
     if (beginResolver) {
       beginResolver();
     }
@@ -17,13 +26,29 @@ export async function* listen<E, D>(
     buffer.push(...dataBuilder(event));
 
     if (commitResolver && buffer.length >= batchSize) {
-      const oldCommitResolver = commitResolver;
-      commitResolver = undefined;
-      oldCommitResolver();
+      commitResolver();
     }
   }
 
-  socket.addEventListener("message", pushEvent);
+  socket.addEventListener("open", () => {
+    (function ping() {
+      if (pong) {
+        pong = false;
+        socket.send("ping");
+        setTimeout(ping, timeout);
+      } else {
+        throw new Error("Ping timeout");
+      }
+    })();
+  });
+
+  socket.addEventListener("message", (event: MessageEvent<string>) => {
+    if ("pong" === event.data) {
+      pong = true;
+    } else {
+      pushEvent(event);
+    }
+  });
 
   while (true) {
     const commit = new Promise<void>((resolve) => {
@@ -40,6 +65,8 @@ export async function* listen<E, D>(
       new Promise<void>((resolve) => setTimeout(resolve, batchTimeout)),
       commit,
     ]);
+
+    commitResolver = undefined;
 
     if (0 !== buffer.length) {
       yield transfer(buffer, Math.min(buffer.length, batchSize));

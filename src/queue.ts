@@ -8,7 +8,7 @@ import {
   ListenPerform,
   QueueJob,
 } from "./types.ts";
-import { listen } from "./ws-event-generator.ts";
+import { messagesStream } from "./ws-event-generator.ts";
 
 export class JetQueue {
   private pluginInstance: BreezeRuntime.Plugin;
@@ -173,11 +173,15 @@ export class JetQueue {
     }
 
     for await (
-      const jobs of listen<string, QueueJob>(
+      const jobs of messagesStream<QueueJob>(
         socket,
-        options.batchSize,
-        100,
-        (event: MessageEvent<string>) => this.parseMessageData(event.data),
+        {
+          timeout: 1_000,
+          batchSize: options.batchSize,
+          batchTimeout: 100,
+          dataBuilder: (event: MessageEvent<string>) =>
+            this.parseMessageData(event.data),
+        },
       )
     ) {
       await perform(jobs, { ack });
@@ -194,37 +198,11 @@ export class JetQueue {
       size: bufferSize.toString(),
     }).toString();
 
-    const socket = new WebSocket(endpoint);
-
-    let pong = true;
-
-    socket.addEventListener("open", () => {
-      (function ping() {
-        if (pong) {
-          pong = false;
-          socket.send("ping");
-          setTimeout(ping, 1_000);
-        } else {
-          throw new Error("Ping timeout");
-        }
-      })();
-    });
-
-    socket.addEventListener("message", (event: MessageEvent<string>) => {
-      if ("pong" === event.data) {
-        pong = true;
-      }
-    });
-
-    return socket;
+    return new WebSocket(endpoint);
   }
 
   private parseMessageData(data: string): Array<QueueJob> {
-    if ("pong" === data) {
-      return [];
-    } else {
-      const message: JobsMessage = JSON.parse(data);
-      return message.payload;
-    }
+    const message: JobsMessage = JSON.parse(data);
+    return message.payload;
   }
 }
