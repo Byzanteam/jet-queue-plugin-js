@@ -69,17 +69,7 @@ export async function* messagesStream<T>(
     commitResolver = undefined;
 
     if (0 !== buffer.length) {
-      yield transfer(buffer, Math.min(buffer.length, batchSize));
+      yield buffer.splice(0, Math.min(buffer.length, batchSize));
     }
   }
-}
-
-function transfer<T>(arr: Array<T>, size: number): Array<T> {
-  const result: Array<T> = [];
-
-  for (let i = 0; i < size; i++) {
-    result.push(arr.shift()!);
-  }
-
-  return result;
 }
