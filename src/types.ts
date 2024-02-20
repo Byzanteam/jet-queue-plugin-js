@@ -129,3 +129,44 @@ type AckMessagePayload =
   | { id: QueueJobId; code: "error" | "cancel"; data: string }
   | { id: QueueJobId; code: "discard"; data?: string }
   | { id: QueueJobId; code: "snooze"; data: number };
+
+export abstract class JetQueueBase {
+  /**
+   * Abstract method to enqueue a job into the queue.
+   *
+   * @param args - The arguments for the job.
+   * @param options - The options for the job.
+   * @returns A promise that resolves to the new job's id.
+   */
+  abstract enqueue<
+    A extends Record<string, unknown>,
+    M extends Record<string, unknown> | undefined,
+  >(
+    args: Readonly<A>,
+    options?: Partial<EnqueueOptions<keyof A & string, M>>,
+  ): Promise<EnqueueJobResponse>;
+
+  /**
+   * Abstract method to listen for jobs.
+   *
+   * @param perform - An async function that handles incoming jobs.
+   * @param options - The options for listening.
+   * @returns A promise that resolves when the listening starts.
+   */
+  abstract listen(
+    perform: ListenPerform,
+    options: ListenOptions,
+  ): Promise<void>;
+
+  /**
+   * Constructor for the JetQueueBase class. May include initialization
+   * logic for subclasses.
+   *
+   * @param queue - The name of the queue.
+   * @param options - Configuration options for the queue.
+   */
+  protected constructor(
+    protected queue: string,
+    protected options: JetQueueOptions,
+  ) {}
+}

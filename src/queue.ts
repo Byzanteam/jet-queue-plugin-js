@@ -2,59 +2,14 @@ import {
   AckMessage,
   EnqueueJobResponse,
   EnqueueOptions,
+  JetQueueBase,
   JetQueueOptions,
   JobsMessage,
   ListenOptions,
   ListenPerform,
   QueueJob,
-  QueueJobId,
 } from "./types.ts";
 import { listen } from "./ws-event-generator.ts";
-
-/**
- * Abstract class defining the basic structure and functionalities
- * of a queue system.
- */
-export abstract class JetQueueBase {
-  /**
-   * Abstract method to enqueue a job into the queue.
-   *
-   * @param args - The arguments for the job.
-   * @param options - The options for the job.
-   * @returns A promise that resolves to the new job's id.
-   */
-  abstract enqueue<
-    A extends Record<string, unknown>,
-    M extends Record<string, unknown> | undefined,
-  >(
-    args: Readonly<A>,
-    options?: Partial<EnqueueOptions<keyof A & string, M>>,
-  ): Promise<EnqueueJobResponse>;
-
-  /**
-   * Abstract method to listen for jobs.
-   *
-   * @param perform - An async function that handles incoming jobs.
-   * @param options - The options for listening.
-   * @returns A promise that resolves when the listening starts.
-   */
-  abstract listen(
-    perform: ListenPerform,
-    options: ListenOptions,
-  ): Promise<void>;
-
-  /**
-   * Constructor for the JetQueueBase class. May include initialization
-   * logic for subclasses.
-   *
-   * @param queue - The name of the queue.
-   * @param options - Configuration options for the queue.
-   */
-  protected constructor(
-    protected queue: string,
-    protected options: JetQueueOptions,
-  ) {}
-}
 
 export class JetQueue extends JetQueueBase {
   private pluginInstance: BreezeRuntime.Plugin;
@@ -328,50 +283,5 @@ async function* chunk<T>(
 
   while (true) {
     yield takeSize();
-  }
-}
-
-export class JetQueueTest extends JetQueueBase {
-  private jobs: Array<QueueJob> = [];
-  private jobIdCounter: QueueJobId = 1; // Starting job ID counter
-
-  constructor(queue: string, options: JetQueueOptions) {
-    super(queue, options);
-  }
-
-  // deno-lint-ignore require-await
-  async enqueue<
-    A extends Record<string, unknown>,
-    M extends Record<string, unknown> | undefined,
-  >(
-    args: Readonly<A>,
-    _options?: Partial<EnqueueOptions<keyof A & string, M>>,
-  ): Promise<EnqueueJobResponse> {
-    const jobId: QueueJobId = this.jobIdCounter++;
-    this.jobs.push({ id: jobId, args });
-
-    const isConflict = false;
-
-    return {
-      id: jobId,
-      is_conflict: isConflict,
-    };
-  }
-
-  async listen(perform: ListenPerform, options: ListenOptions): Promise<void> {
-    while (this.jobs.length > 0) {
-      const batchSize = options.batchSize || 1;
-      const jobsBatch = this.jobs.splice(0, batchSize);
-
-      await perform(jobsBatch, {
-        ack: (message: AckMessage) => {
-          console.log(`Acknowledged: ${JSON.stringify(message)}`);
-        },
-      });
-    }
-  }
-
-  addJobDirectly(job: QueueJob) {
-    this.jobs.push(job);
   }
 }
