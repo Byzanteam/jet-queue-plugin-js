@@ -14,7 +14,7 @@ export class JetQueueTest extends JetQueueBase {
   private jobs: Array<QueueJob> = [];
   private jobIdCounter: QueueJobId = 1;
   private eventTarget: EventTarget = new EventTarget();
-  // deno-lint-ignore no-inferrable-types
+  // deno-lint-ignore no-inferable-types
   private listening: boolean = false;
 
   constructor(queue: string, options: JetQueueOptions) {
