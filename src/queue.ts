@@ -9,7 +9,7 @@ import {
   ListenPerform,
   QueueJob,
 } from "./types.ts";
-import { listen } from "./ws-event-generator.ts";
+import { messagesStream } from "./ws-event-generator.ts";
 
 export class JetQueue extends JetQueueBase {
   private pluginInstance: BreezeRuntime.Plugin;
@@ -120,6 +120,10 @@ export class JetQueue extends JetQueueBase {
 
     const response = await fetch(endpoint, {
       method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(body),
     });
 
@@ -171,10 +175,15 @@ export class JetQueue extends JetQueueBase {
     }
 
     for await (
-      const jobs of chunk(
-        this.listenQueueJobs(socket),
-        options.batchSize,
-        100,
+      const jobs of messagesStream<QueueJob>(
+        socket,
+        {
+          timeout: 1_000,
+          batchSize: options.batchSize,
+          batchTimeout: 100,
+          dataBuilder: (event: MessageEvent<string>) =>
+            this.parseMessageData(event.data),
+        },
       )
     ) {
       await perform(jobs, { ack });
@@ -184,104 +193,18 @@ export class JetQueue extends JetQueueBase {
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
     const { bufferSize } = options;
 
-    const endpoint = await this.pluginInstance.getEndpoint();
+    const endpoint = await this.pluginInstance.getEndpoint("/websocket");
 
     endpoint.search = new URLSearchParams({
       queue: this.queue,
       size: bufferSize.toString(),
     }).toString();
 
-    switch (endpoint.protocol) {
-      case "http":
-        endpoint.protocol = "ws";
-        break;
-
-      case "https":
-        endpoint.protocol = "wss";
-        break;
-
-      default:
-        break;
-    }
-
-    const socket = new WebSocket(endpoint);
-
-    return socket;
+    return new WebSocket(endpoint);
   }
 
-  private async *listenQueueJobs(socket: WebSocket): AsyncIterable<QueueJob> {
-    let pong = true;
-
-    (function ping() {
-      if (pong) {
-        pong = false;
-        socket.send("ping");
-        setTimeout(ping, 1_000);
-      } else {
-        throw new Error("Ping timeout");
-      }
-    })();
-
-    for await (const { data } of listen<string>(socket)) {
-      const message = this.parseMessageData(data);
-
-      if ("pong" === message) {
-        pong = true;
-      } else {
-        yield* message.payload;
-      }
-    }
-  }
-
-  private parseMessageData(data: string): "pong" | JobsMessage {
-    if ("pong" === data) {
-      return data;
-    } else {
-      return JSON.parse(data);
-    }
-  }
-}
-
-async function* chunk<T>(
-  iterable: AsyncIterable<T>,
-  size: number,
-  timeout: number,
-): AsyncIterable<Array<T>> {
-  const iterator = iterable[Symbol.asyncIterator]();
-  const buffer: Array<T> = [];
-
-  async function takeSize(): Promise<Array<T>> {
-    while (buffer.length < size) {
-      const result = await Promise.race([
-        new Promise<void>((resolve) => setTimeout(resolve, timeout)),
-        iterator.next().then((elem) => {
-          buffer.push(elem.value);
-          return elem;
-        }),
-      ]);
-
-      // 超时了
-      if (!result) break;
-
-      if (buffer.length === size) {
-        break;
-      }
-    }
-
-    return transfer<T>(buffer, Math.min(buffer.length, size));
-  }
-
-  function transfer<K>(arr: Array<K>, size: number): Array<K> {
-    const result: Array<K> = [];
-
-    for (let i = 0; i < size; i++) {
-      result.push(arr.shift()!);
-    }
-
-    return result;
-  }
-
-  while (true) {
-    yield takeSize();
+  private parseMessageData(data: string): Array<QueueJob> {
+    const message: JobsMessage = JSON.parse(data);
+    return message.payload;
   }
 }
