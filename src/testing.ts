@@ -14,6 +14,8 @@ export class JetQueueTest extends JetQueueBase {
   private jobs: Array<QueueJob> = [];
   private jobIdCounter: QueueJobId = 1;
   private eventTarget: EventTarget = new EventTarget();
+  // deno-lint-ignore no-inferrable-types
+  private listening: boolean = false;
 
   constructor(queue: string, options: JetQueueOptions) {
     super(queue, options);
@@ -42,7 +44,9 @@ export class JetQueueTest extends JetQueueBase {
 
   // deno-lint-ignore require-await
   async listen(perform: ListenPerform, _options: ListenOptions): Promise<void> {
-    this.eventTarget.addEventListener("jobEnqueued", async (event) => {
+    this.listening = true;
+
+    const listener = async (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       const jobDetail: QueueJob = event.detail;
 
@@ -56,10 +60,24 @@ export class JetQueueTest extends JetQueueBase {
           },
         });
       }
+    };
+
+    this.eventTarget.addEventListener("jobEnqueued", listener);
+
+    return new Promise((resolve) => {
+      this.stopListening = () => {
+        this.eventTarget.removeEventListener("jobEnqueued", listener);
+        this.listening = false;
+        resolve();
+      };
     });
   }
 
-  addJobDirectly(job: QueueJob) {
-    this.jobs.push(job);
+  stopListening: () => void = () => {
+    console.warn("Listen not started or already stopped.");
+  };
+
+  getJobs(): Array<QueueJob> {
+    return this.jobs;
   }
 }
