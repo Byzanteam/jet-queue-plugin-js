@@ -1,3 +1,4 @@
+// deno-lint-ignore-file
 import {
   AckMessage,
   EnqueueJobResponse,
@@ -14,14 +15,12 @@ export class JetQueueTest extends JetQueueBase {
   private jobs: Array<QueueJob> = [];
   private jobIdCounter: QueueJobId = 1;
   private eventTarget: EventTarget = new EventTarget();
-  // deno-lint-ignore no-inferable-types
   private listening: boolean = false;
 
   constructor(queue: string, options: JetQueueOptions) {
     super(queue, options);
   }
 
-  // deno-lint-ignore require-await
   async enqueue<
     A extends Record<string, unknown>,
     M extends Record<string, unknown> | undefined,
@@ -42,7 +41,6 @@ export class JetQueueTest extends JetQueueBase {
     };
   }
 
-  // deno-lint-ignore require-await
   async listen(perform: ListenPerform, _options: ListenOptions): Promise<void> {
     this.listening = true;
 
