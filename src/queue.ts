@@ -1,19 +1,24 @@
+import { getQueue, getTestQueueInstance, setQueue } from "./queue_state.ts";
 import {
   AckMessage,
+  EnqueueFunction,
   EnqueueJobResponse,
   EnqueueOptions,
+  JetQueueBase,
   JetQueueOptions,
   JobsMessage,
+  ListenFunction,
   ListenOptions,
   ListenPerform,
   QueueJob,
 } from "./types.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
-export class JetQueue {
+export class JetQueue extends JetQueueBase {
   private pluginInstance: BreezeRuntime.Plugin;
 
-  constructor(private queue: string, options: JetQueueOptions) {
+  constructor(queue: string, options: JetQueueOptions) {
+    super(queue, options);
     const pluginInstance = BreezeRuntime.plugins[options.instanceName];
 
     if (!pluginInstance) {
@@ -228,4 +233,28 @@ function convertCamelToSnakeCase(
 
     return acc;
   }, {} as Record<string, unknown>);
+}
+
+export function useQueue(
+  queueName: string,
+  instanceName: string,
+): { enqueue: EnqueueFunction; listen: ListenFunction } {
+  const testQueueInstance = getTestQueueInstance();
+
+  if (testQueueInstance) {
+    return {
+      enqueue: testQueueInstance.enqueue.bind(testQueueInstance),
+      listen: testQueueInstance.listen,
+    };
+  } else {
+    let queue = getQueue(queueName);
+    if (!queue) {
+      queue = new JetQueue(queueName, { instanceName });
+      setQueue(queueName, queue);
+    }
+    return {
+      enqueue: queue.enqueue,
+      listen: queue.listen,
+    };
+  }
 }
