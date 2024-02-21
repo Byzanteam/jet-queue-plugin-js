@@ -31,3 +31,31 @@ for await (const job of queue.listen()) {
   // handle job
 }
 ```
+
+## JetQueueTesting
+
+- Mock Enqueuing: Enables the simulation of job enqueuing in tests.
+- Task Verification: Offers assertion capabilities to check if specific tasks
+  have been enqueued.
+- Task Management: Supports retrieval and clearance of all tasks in the mock
+  queue.
+
+Usage Example
+
+```ts
+import { JetQueueTesting } from "./testing.ts";
+import { assert } from "https://deno.land/std/assert/mod.ts";
+
+// Create a JetQueueTesting instance
+const jetQueue = new JetQueueTesting("testQueue");
+
+// Mock a job enqueuing
+const jobArgs = { id: "sample-job-id", data: "sample data" };
+await jetQueue.enqueue(jobArgs);
+
+// Assert the job was enqueued
+assert(jetQueue.assertEnqueued(jobArgs));
+
+// Clear all mocked jobs
+jetQueue.clearJobs();
+```
