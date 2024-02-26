@@ -104,11 +104,19 @@ export class JetQueue {
     args: Readonly<A>,
     options?: Partial<EnqueueOptions<keyof A & string, M>>,
   ): Promise<EnqueueJobResponse> {
+    let normalizedOptions: object;
+
+    if (options) {
+      normalizedOptions = convertCamelToSnakeCase(options);
+    } else {
+      normalizedOptions = {};
+    }
+
     return await this.post<EnqueueJobResponse>("/jobs", {
       args,
       options: {
         queue: this.queue,
-        ...options,
+        ...normalizedOptions,
       },
     });
   }
@@ -205,4 +213,19 @@ export class JetQueue {
     const message: JobsMessage = JSON.parse(data);
     return message.payload;
   }
+}
+
+function convertCamelToSnakeCase(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const snakeKey = key
+      .replace(/([A-Z])/g, "_$1")
+      .toLowerCase()
+      .replace(/^_/, "");
+
+    acc[snakeKey] = value;
+
+    return acc;
+  }, {} as Record<string, unknown>);
 }
