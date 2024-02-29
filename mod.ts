@@ -13,6 +13,7 @@ export {
 } from "./src/types.ts";
 export {
   type EnqueueFunction,
+  JetQueueMode,
   type ListenFunction,
   useQueue,
 } from "./src/use-queue.ts";
