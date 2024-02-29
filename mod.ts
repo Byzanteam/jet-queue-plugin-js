@@ -11,4 +11,9 @@ export {
   type QueueJob,
   type QueueJobId,
 } from "./src/types.ts";
-export { JetQueue } from "./src/queue.ts";
+export {
+  type EnqueueFunction,
+  type ListenFunction,
+  useQueue,
+} from "./src/use-queue.ts";
+export * from "./src/testing.ts";
