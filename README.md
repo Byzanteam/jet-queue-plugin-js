@@ -1,61 +1,114 @@
 # jet-queue-plugin-js
 
-JS Client library to interact with Jet queue plugin.
+JS Client library to interact with Jet queue plugin, supporting both
+plugin-based and in-memory queue mechanisms for testing and development
+purposes.
 
-## Usage
+## Installation
 
-Install it via [jsdelivr](https://www.jsdelivr.com).
+Install it via [jsdelivr](https://www.jsdelivr.com/).
 
 ```ts
-import { JetQueue } from "https://cdn.jsdelivr.net/gh/Byzanteam/jet-queue-plugin-js/mod.ts";
+import {
+  JetQueueMode,
+  setMode,
+  useQueue,
+} from "<https://cdn.jsdelivr.net/gh/Byzanteam/jet-queue-plugin-js/mod.ts>";
 ```
 
-Then you're able to interact with the queue.
+**Usage**
+
+Before interacting with the queue, you can set the mode depending on your
+environment (Plugin or InMemory for testing).
 
 ```ts
-const queue = new JetQueue("default");
+// Set to InMemory mode for testing
+setMode(JetQueueMode.InMemory);
+
+// Or set to Plugin mode for production
+setMode(JetQueueMode.Plugin);
+```
+
+Then, use the **`useQueue`** function to interact with the queue. This allows
+you to enqueue jobs and listen for jobs to process in a more flexible way,
+depending on the mode set.
+
+### **Enqueuing a Job**
+
+```ts
+const { enqueue } = useQueue("default", { instanceName: "jetQueueInstance" });
 
 // enqueue a job
-await queue.enqueue({ id: 1, name: "Alice" }, {
+await enqueue({ id: 1, name: "Alice" }, {
   meta: { slug: "unique-key" },
   unique: { fields: ["meta"], keys: ["slug", "id", "name"] },
 });
 ```
 
-Listening for jobs to process.
+### **Listening for Jobs**
 
 ```ts
-const queue = new JetQueue("default");
+const { listen } = useQueue("default", { instanceName: "jetQueueInstance" });
 
-for await (const job of queue.listen()) {
-  // handle job
-}
+await listen(async (jobs) => {
+  for (const job of jobs) {
+    // handle job
+  }
+});
 ```
 
-## JetQueueTesting
+## Testing Utilities
 
-- Mock Enqueuing: Enables the simulation of job enqueuing in tests.
-- Task Verification: Offers assertion capabilities to check if specific tasks
-  have been enqueued.
-- Task Management: Supports retrieval and clearance of all tasks in the mock
-  queue.
+When using `JetQueueMode.InMemory` for testing, the library provides utility
+functions to help simulate queue operations without a real backend. These
+functions allow you to enqueue jobs, retrieve enqueued jobs, clear the job list
+for isolated tests, and find specific jobs based on criteria.
 
-Usage Example
+### Enqueuing, Retrieving, and Finding Specific Jobs
+
+To enqueue a job, retrieve it, and assert specific job characteristics in your
+tests:
 
 ```ts
-import { JetQueueTesting } from "./testing.ts";
-import { assert } from "https://deno.land/std/assert/mod.ts";
+import {
+  clearJobs,
+  findEnqueuedJob,
+  getJobs,
+  JetQueueMode,
+  setMode,
+  useQueue,
+} from "xxx/mod.ts";
 
-// Create a JetQueueTesting instance
-const jetQueue = new JetQueueTesting("testQueue");
+// Set the mode to InMemory for testing
+setMode(JetQueueMode.InMemory);
 
-// Mock a job enqueuing
-const jobArgs = { id: "sample-job-id", data: "sample data" };
-await jetQueue.enqueue(jobArgs);
+// Use the testing queue
+const { enqueue } = useQueue("testQueue", {});
 
-// Assert the job was enqueued
-assert(jetQueue.assertEnqueued(jobArgs));
+// Enqueue a job
+await enqueue({ id: 1, name: "Test" });
 
-// Clear all mocked jobs
-jetQueue.clearJobs();
+// Retrieve all enqueued jobs
+const jobs = getJobs();
+
+// Assert the enqueued job is as expected
+console.assert(jobs.length === 1, "Expected exactly one job to be enqueued");
+
+// Find a specific job by its expected queue and arguments
+const expectedQueue = "testQueue";
+const expectedArgs = { id: 1, name: "Test" };
+const job = findEnqueuedJob(expectedQueue, expectedArgs);
+
+// Assert the found job
+console.assert(
+  job !== undefined,
+  "Expected to find the job with specified args",
+);
+console.assert(
+  job.args.id === expectedArgs.id && job.args.name === expectedArgs.name,
+  "Job's args should match the expected args",
+);
+
+// Clear all enqueued jobs for isolated tests
+clearJobs();
 ```
