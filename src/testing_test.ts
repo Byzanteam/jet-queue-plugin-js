@@ -1,50 +1,53 @@
-import { describe, it } from "https://deno.land/std@0.208.0/testing/bdd.ts";
+import {
+  afterEach,
+  describe,
+  it,
+} from "https://deno.land/std@0.208.0/testing/bdd.ts";
 import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { JetQueueTesting } from "./testing.ts";
+import {
+  clearJobs,
+  findEnqueuedJob,
+  getJobs,
+  makeTestingFunctions,
+} from "./testing.ts";
 
-describe("JetQueueTesting", () => {
-  it("should enqueue a job correctly", async () => {
-    const jetQueue = new JetQueueTesting("testQueue", { instanceName: "" });
-    const jobArgs = { id: "time-slot-test-id", scheduleAt: new Date() };
-    const response = await jetQueue.enqueue(jobArgs);
-
-    assert(jetQueue.assertEnqueued(jobArgs));
-    assertEquals(response.is_conflict, false);
-    assert(response.id > 0);
+describe("Queue Testing Functions", () => {
+  afterEach(() => {
+    clearJobs();
   });
 
-  it("should verify job presence correctly", () => {
-    const jetQueue = new JetQueueTesting("testQueue", { instanceName: "" });
-    const date = new Date();
-    const jobArgs = { id: "time-slot-test-id", scheduleAt: date };
-    jetQueue.enqueue(jobArgs);
+  it("should enqueue a job and retrieve it", async () => {
+    const { enqueue } = makeTestingFunctions("testQueue", { instanceName: "" });
 
-    assert(jetQueue.assertEnqueued({ id: "time-slot-test-id" }));
-    assert(jetQueue.assertEnqueued({ scheduleAt: date }));
-    assertEquals(jetQueue.assertEnqueued({ arg1: "nonExistentArg" }), false);
+    const jobArgs = { task: "testTask" };
+    const enqueueResult = await enqueue(jobArgs, {});
+    assert(enqueueResult.id > 0, "Job ID should be a positive number");
+    assertEquals(
+      enqueueResult.is_conflict,
+      false,
+      "is_conflict should be false",
+    );
+
+    const jobs = getJobs();
+    assertEquals(jobs.length, 1, "There should be one job enqueued");
+    assertEquals(jobs[0][1].args, jobArgs, "Enqueued job args should match");
+
+    const foundJob = findEnqueuedJob("testQueue", jobArgs);
+    assert(foundJob, "Job should be found");
+    assertEquals(foundJob?.args, jobArgs, "Found job args should match");
   });
 
-  it("should clear all enqueued jobs", async () => {
-    const jetQueue = new JetQueueTesting("testQueue", { instanceName: "" });
-    await jetQueue.enqueue({ id: "time-slot-test-id1" });
-    await jetQueue.enqueue({ id: "time-slot-test-id2" });
+  it("should handle clearing jobs correctly", () => {
+    const { enqueue } = makeTestingFunctions("testQueue", { instanceName: "" });
+    const jobArgs = { task: "testTask" };
 
-    assertEquals(jetQueue.getJobs(), [
-      {
-        id: 1,
-        args: { id: "time-slot-test-id1" },
-      },
-      {
-        id: 2,
-        args: { id: "time-slot-test-id2" },
-      },
-    ]);
+    enqueue(jobArgs, {});
 
-    jetQueue.clearJobs();
-
-    assertEquals(jetQueue.getJobs().length, 0);
+    clearJobs();
+    const jobs = getJobs();
+    assertEquals(jobs.length, 0, "Jobs should be cleared");
   });
 });
