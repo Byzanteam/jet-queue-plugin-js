@@ -1,18 +1,10 @@
 import {
-  afterEach,
-  describe,
-  it,
-} from "https://deno.land/std@0.208.0/testing/bdd.ts";
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.208.0/assert/mod.ts";
-import {
   clearJobs,
   findEnqueuedJob,
   getJobs,
   makeTestingFunctions,
 } from "./testing.ts";
+import { afterEach, assert, assertEquals, describe, it } from "../dev_deps.ts";
 
 describe("Queue Testing Functions", () => {
   afterEach(() => {
