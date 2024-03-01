@@ -9,7 +9,7 @@ export enum JetQueueMode {
 
 let mode: JetQueueMode = JetQueueMode.Plugin;
 
-export function setMode(newMode: JetQueueMode) {
+export function setQueueMode(newMode: JetQueueMode) {
   mode = newMode;
 }
 

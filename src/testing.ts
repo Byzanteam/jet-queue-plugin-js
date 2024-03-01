@@ -1,9 +1,4 @@
-import {
-  EnqueueFunction,
-  JetQueueMode,
-  ListenFunction,
-  setMode,
-} from "./use-queue.ts";
+import { EnqueueFunction, ListenFunction } from "./use-queue.ts";
 import { JetQueueOptions, QueueJob, QueueJobId } from "./types.ts";
 
 let jobs: Array<[string, QueueJob]> = [];
@@ -65,5 +60,3 @@ export function findEnqueuedJob(
     });
   })?.[1];
 }
-
-export { type JetQueueMode, setMode };
