@@ -42,4 +42,25 @@ describe("Queue Testing Functions", () => {
     const jobs = getJobs();
     assertEquals(jobs.length, 0, "Jobs should be cleared");
   });
+
+  it("should cancel a job correctly", async () => {
+    const { enqueue, cancel } = makeTestingFunctions("testQueue", {
+      instanceName: "",
+    });
+
+    const jobArgs = { task: "testCancel" };
+    const { id: jobId } = await enqueue(jobArgs, {});
+
+    let foundJob = findEnqueuedJob("testQueue", jobArgs);
+    assert(foundJob !== undefined, "The job should be enqueued successfully");
+
+    await cancel(jobId);
+
+    foundJob = findEnqueuedJob("testQueue", jobArgs);
+    assertEquals(
+      foundJob,
+      undefined,
+      "The job should be removed from the queue after cancellation",
+    );
+  });
 });
