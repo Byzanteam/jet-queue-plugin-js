@@ -142,6 +142,43 @@ export class JetQueue {
   }
 
   /**
+   * Cancels a job.
+   *
+   * @param jobId - The ID of the job to cancel.
+   * @returns A promise that resolves when the job has been cancelled.
+   *
+   * @example
+   *
+   * Cancel a job with a specific ID:
+   * ```ts
+   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * await queue.cancel("12345");
+   * ```
+   *
+   * This method sends a DELETE request to the backend service to cancel the job with the given ID. The job ID must be a string that uniquely identifies the job to be cancelled.
+   */
+  async cancel(jobId: string): Promise<void> {
+    await this.delete(`/jobs/${jobId}`);
+  }
+
+  private async delete(path: string): Promise<void> {
+    const endpoint = await this.pluginInstance.getEndpoint(path);
+
+    const response = await fetch(endpoint, {
+      method: "DELETE",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json();
+      throw new Error("Request failed", { cause: errorBody });
+    }
+  }
+
+  /**
    * Listen for jobs.
    *
    * @param perform - An async function that handles incoming jobs
