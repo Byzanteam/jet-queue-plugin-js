@@ -2,7 +2,7 @@ import {
   CancelFunction,
   EnqueueFunction,
   ListenFunction,
-} from "./use-queue.ts"; // 更新导入以包括CancelFunction
+} from "./use-queue.ts";
 import { JetQueueOptions, QueueJob, QueueJobId } from "./types.ts";
 
 let jobs: Array<[string, QueueJob]> = [];
