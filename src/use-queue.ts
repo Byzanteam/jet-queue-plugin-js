@@ -15,10 +15,12 @@ export function setQueueMode(newMode: JetQueueMode) {
 
 export type EnqueueFunction = JetQueue["enqueue"];
 export type ListenFunction = JetQueue["listen"];
+export type CancelFunction = JetQueue["cancel"];
 
 type Functions = {
   enqueue: EnqueueFunction;
   listen: ListenFunction;
+  cancel: CancelFunction;
 };
 
 export function useQueue(
@@ -38,6 +40,7 @@ export function useQueue(
   return {
     enqueue: proxyFunction(buildFunctions, "enqueue"),
     listen: proxyFunction(buildFunctions, "listen"),
+    cancel: proxyFunction(buildFunctions, "cancel"),
   };
 }
 
@@ -52,6 +55,7 @@ const doBuildFunctions: typeof useQueue = function (
       return {
         enqueue: queue.enqueue,
         listen: queue.listen,
+        cancel: queue.cancel,
       };
     }
 

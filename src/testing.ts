@@ -1,4 +1,8 @@
-import { EnqueueFunction, ListenFunction } from "./use-queue.ts";
+import {
+  CancelFunction,
+  EnqueueFunction,
+  ListenFunction,
+} from "./use-queue.ts"; // 更新导入以包括CancelFunction
 import { JetQueueOptions, QueueJob, QueueJobId } from "./types.ts";
 
 let jobs: Array<[string, QueueJob]> = [];
@@ -28,9 +32,21 @@ export function makeTestingFunctions(
     return Promise.reject("Not implemented in testing");
   };
 
+  const cancel: CancelFunction = function (
+    jobId: QueueJobId,
+  ): ReturnType<CancelFunction> {
+    const index = jobs.findIndex(([_, job]) => job.id === jobId);
+    if (index !== -1) {
+      jobs.splice(index, 1);
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error("Job not found"));
+  };
+
   return {
     enqueue,
     listen,
+    cancel,
   };
 }
 

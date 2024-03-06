@@ -7,6 +7,7 @@ import {
   ListenOptions,
   ListenPerform,
   QueueJob,
+  QueueJobId,
 } from "./types.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
@@ -157,7 +158,7 @@ export class JetQueue {
    *
    * This method sends a DELETE request to the backend service to cancel the job with the given ID. The job ID must be a string that uniquely identifies the job to be cancelled.
    */
-  async cancel(jobId: string): Promise<void> {
+  async cancel(jobId: QueueJobId): Promise<void> {
     await this.delete(`/jobs/${jobId}`);
   }
 
