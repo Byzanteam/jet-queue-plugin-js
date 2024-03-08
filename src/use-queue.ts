@@ -13,23 +13,31 @@ export function setQueueMode(newMode: JetQueueMode) {
   mode = newMode;
 }
 
-export type EnqueueFunction = JetQueue["enqueue"];
-export type ListenFunction = JetQueue["listen"];
-export type CancelFunction = JetQueue["cancel"];
+export type EnqueueFunction<T extends Record<string, unknown>> = JetQueue<
+  T
+>["enqueue"];
+export type ListenFunction<T extends Record<string, unknown>> = JetQueue<
+  T
+>["listen"];
+export type CancelFunction<T extends Record<string, unknown>> = JetQueue<
+  T
+>["cancel"];
 
-type Functions = {
-  enqueue: EnqueueFunction;
-  listen: ListenFunction;
-  cancel: CancelFunction;
+type Functions<T extends Record<string, unknown>> = {
+  enqueue: EnqueueFunction<T>;
+  listen: ListenFunction<T>;
+  cancel: CancelFunction<T>;
 };
 
-export function useQueue(
+export function useQueue<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(
   queueName: string,
   options: JetQueueOptions,
-): Functions {
-  let functions: ReturnType<typeof useQueue> | undefined;
+): Functions<T> {
+  let functions: ReturnType<typeof useQueue<T>> | undefined;
 
-  function buildFunctions(): Functions {
+  function buildFunctions(): Functions<T> {
     if (functions) return functions;
 
     functions = doBuildFunctions(queueName, options);
@@ -44,13 +52,15 @@ export function useQueue(
   };
 }
 
-const doBuildFunctions: typeof useQueue = function (
-  queueName,
-  options,
-): Functions {
+function doBuildFunctions<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(
+  queueName: Parameters<typeof useQueue<T>>[0],
+  options: Parameters<typeof useQueue<T>>[1],
+): Functions<T> {
   switch (mode) {
     case JetQueueMode.Plugin: {
-      const queue = new JetQueue(queueName, options);
+      const queue = new JetQueue<T>(queueName, options);
 
       return {
         enqueue: queue.enqueue,
@@ -66,9 +76,13 @@ const doBuildFunctions: typeof useQueue = function (
     default:
       throw "Never reach here";
   }
-};
+}
 
-function proxyFunction<T extends Functions, U extends keyof Functions>(
+function proxyFunction<
+  A extends Record<string, unknown>,
+  T extends Functions<A>,
+  U extends keyof Functions<A>,
+>(
   builder: () => T,
   functionName: U,
 ) {
