@@ -7,6 +7,7 @@ import {
   ListenOptions,
   ListenPerform,
   QueueJob,
+  QueueJobId,
 } from "./types.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
@@ -112,7 +113,7 @@ export class JetQueue {
       normalizedOptions = {};
     }
 
-    return await this.post<EnqueueJobResponse>("/jobs", {
+    return await this.requset<EnqueueJobResponse>("POST", "/jobs", {
       args,
       options: {
         queue: this.queue,
@@ -121,11 +122,35 @@ export class JetQueue {
     });
   }
 
-  private async post<T>(path: string, body: object): Promise<T> {
+  /**
+   * Cancels a job.
+   *
+   * @param jobId - The ID of the job to be cancelled.
+   * @returns A promise that resolves when the job has been cancelled.
+   *
+   * @example
+   *
+   * Cancel a job with a specific ID:
+   * ```ts
+   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * await queue.cancel(123);
+   * ```
+   *
+   * This method sends a DELETE request to the backend service to cancel the job with the given ID. The job ID must be a QueueJobId that uniquely identifies the job to be cancelled.
+   */
+  async cancel(jobId: QueueJobId): Promise<void> {
+    await this.requset<void>("DELETE", `/jobs/${jobId}`);
+  }
+
+  private async requset<T>(
+    method: "POST" | "DELETE",
+    path: string,
+    body?: object,
+  ): Promise<T> {
     const endpoint = await this.pluginInstance.getEndpoint(path);
 
     const response = await fetch(endpoint, {
-      method: "POST",
+      method,
       headers: {
         "Accept": "application/json",
         "Content-Type": "application/json",
