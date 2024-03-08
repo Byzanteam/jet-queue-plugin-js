@@ -5,17 +5,19 @@ import {
 } from "./use-queue.ts";
 import { JetQueueOptions, QueueJob, QueueJobId } from "./types.ts";
 
-let jobs: Array<[string, QueueJob]> = [];
+let jobs: Array<[string, QueueJob<Record<string, unknown>>]> = [];
 let jobIdCounter: QueueJobId = 1;
 
-export function makeTestingFunctions(
+export function makeTestingFunctions<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(
   queue: string,
   _options: JetQueueOptions,
 ) {
-  const enqueue: EnqueueFunction = function (
+  const enqueue: EnqueueFunction<T> = function (
     args,
     _options,
-  ): ReturnType<EnqueueFunction> {
+  ): ReturnType<EnqueueFunction<T>> {
     const jobId: QueueJobId = jobIdCounter++;
     jobs.push([queue, { id: jobId, args }]);
 
@@ -25,16 +27,16 @@ export function makeTestingFunctions(
     });
   };
 
-  const listen: ListenFunction = function (
+  const listen: ListenFunction<T> = function (
     _perform,
     _options,
-  ): ReturnType<ListenFunction> {
+  ): ReturnType<ListenFunction<T>> {
     return Promise.reject("Not implemented in testing");
   };
 
-  const cancel: CancelFunction = function (
+  const cancel: CancelFunction<T> = function (
     jobId: QueueJobId,
-  ): ReturnType<CancelFunction> {
+  ): ReturnType<CancelFunction<T>> {
     const index = jobs.findIndex(([_, job]) => job.id === jobId);
     if (index !== -1) {
       jobs.splice(index, 1);
@@ -60,7 +62,7 @@ export function getJobs() {
 export function findEnqueuedJob(
   expectedQueue: string,
   expectedArgs: Record<string, unknown>,
-): QueueJob | undefined {
+): QueueJob<Record<string, unknown>> | undefined {
   return jobs.find(([queue, job]) => {
     if (queue !== expectedQueue) return false;
 

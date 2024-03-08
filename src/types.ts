@@ -11,9 +11,9 @@ export interface EnqueueJobResponse {
   is_conflict: boolean;
 }
 
-export interface QueueJob {
+export interface QueueJob<T extends Record<string, unknown>> {
   id: QueueJobId;
-  args: Readonly<Record<string, unknown>>;
+  args: Readonly<T>;
 }
 
 interface UniqueOptions<T extends string> {
@@ -102,8 +102,10 @@ export interface ListenPerformOptions {
   ack: (message: AckMessage) => void;
 }
 
-export type ListenPerform = (
-  jobs: ReadonlyArray<QueueJob>,
+export type ListenPerform<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> = (
+  jobs: ReadonlyArray<QueueJob<T>>,
   options: ListenPerformOptions,
 ) => Promise<void>;
 
@@ -114,9 +116,11 @@ export interface ListenOptions {
   bufferSize: number;
 }
 
-export interface JobsMessage {
+export interface JobsMessage<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
   type: "job";
-  payload: Array<QueueJob>;
+  payload: Array<QueueJob<T>>;
 }
 
 export interface AckMessage {

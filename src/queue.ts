@@ -11,7 +11,9 @@ import {
 } from "./types.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
-export class JetQueue {
+export class JetQueue<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
   private pluginInstance: BreezeRuntime.Plugin;
 
   constructor(private queue: string, options: JetQueueOptions) {
@@ -198,7 +200,10 @@ export class JetQueue {
    * await queue.listen(perform, { batchSize: 10, bufferSize: 20 });
    *  ```
    */
-  async listen(perform: ListenPerform, options: ListenOptions): Promise<void> {
+  async listen(
+    perform: ListenPerform<T>,
+    options: ListenOptions,
+  ): Promise<void> {
     const socket = await this.listenSocket(options);
 
     function ack(message: AckMessage) {
@@ -206,7 +211,7 @@ export class JetQueue {
     }
 
     for await (
-      const jobs of messagesStream<QueueJob>(
+      const jobs of messagesStream<QueueJob<T>>(
         socket,
         {
           timeout: 1_000,
@@ -234,8 +239,8 @@ export class JetQueue {
     return new WebSocket(endpoint);
   }
 
-  private parseMessageData(data: string): Array<QueueJob> {
-    const message: JobsMessage = JSON.parse(data);
+  private parseMessageData(data: string): Array<QueueJob<T>> {
+    const message: JobsMessage<T> = JSON.parse(data);
     return message.payload;
   }
 }
