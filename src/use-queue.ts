@@ -63,9 +63,9 @@ function doBuildFunctions<
       const queue = new JetQueue<T>(queueName, options);
 
       return {
-        enqueue: queue.enqueue,
-        listen: queue.listen,
-        cancel: queue.cancel,
+        enqueue: queue.enqueue.bind(queue),
+        listen: queue.listen.bind(queue),
+        cancel: queue.cancel.bind(queue),
       };
     }
 
@@ -93,6 +93,6 @@ function proxyFunction<
       ...args: Parameters<T[U]>
     ) => ReturnType<T[U]>;
 
-    return fn.apply(null, args);
+    return fn(...args);
   };
 }
