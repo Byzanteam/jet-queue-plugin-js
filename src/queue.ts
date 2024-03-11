@@ -115,7 +115,7 @@ export class JetQueue<
       normalizedOptions = {};
     }
 
-    return await this.requset<EnqueueJobResponse>("POST", "/jobs", {
+    return await this.request<EnqueueJobResponse>("POST", "/jobs", {
       args,
       options: {
         queue: this.queue,
@@ -141,10 +141,10 @@ export class JetQueue<
    * This method sends a DELETE request to the backend service to cancel the job with the given ID. The job ID must be a QueueJobId that uniquely identifies the job to be cancelled.
    */
   async cancel(jobId: QueueJobId): Promise<void> {
-    await this.requset<void>("DELETE", `/jobs/${jobId}`);
+    await this.request<void>("DELETE", `/jobs/${jobId}`);
   }
 
-  private async requset<T>(
+  private async request<T>(
     method: "POST" | "DELETE",
     path: string,
     body?: object,
