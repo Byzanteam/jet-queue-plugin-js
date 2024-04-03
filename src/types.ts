@@ -4,7 +4,7 @@ export interface JetQueueOptions {
   instanceName: string;
 }
 
-export type QueueJobId = number;
+export type QueueJobId = bigint;
 
 export interface EnqueueJobResponse {
   id: QueueJobId;
