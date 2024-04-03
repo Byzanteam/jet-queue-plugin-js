@@ -6,7 +6,7 @@ import {
 import { JetQueueOptions, QueueJob, QueueJobId } from "./types.ts";
 
 let jobs: Array<[string, QueueJob<Record<string, unknown>>]> = [];
-let jobIdCounter: QueueJobId = 1;
+let jobIdCounter: QueueJobId = BigInt(1);
 
 export function makeTestingFunctions<
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -18,7 +18,8 @@ export function makeTestingFunctions<
     args,
     _options,
   ): ReturnType<EnqueueFunction<T>> {
-    const jobId: QueueJobId = jobIdCounter++;
+    const jobId: QueueJobId = jobIdCounter;
+    jobIdCounter = jobIdCounter + BigInt(1);
     jobs.push([queue, { id: jobId, args }]);
 
     return Promise.resolve({
