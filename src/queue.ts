@@ -107,6 +107,8 @@ export class JetQueue<
     args: Readonly<A>,
     options?: Partial<EnqueueOptions<keyof A & string, M>>,
   ): Promise<EnqueueJobResponse> {
+    console.log("我被调用了 啊啊啊", args);
+
     let normalizedOptions: object;
 
     if (options) {
