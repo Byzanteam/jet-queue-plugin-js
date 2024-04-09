@@ -115,13 +115,13 @@ export class JetQueue<
       normalizedOptions = {};
     }
 
-    return await this.request<EnqueueJobResponse>("POST", "/jobs", {
+    return await this.request("POST", "/jobs", {
       args,
       options: {
         queue: this.queue,
         ...normalizedOptions,
       },
-    });
+    }).then((res) => res.json());
   }
 
   /**
@@ -141,14 +141,14 @@ export class JetQueue<
    * This method sends a DELETE request to the backend service to cancel the job with the given ID. The job ID must be a QueueJobId that uniquely identifies the job to be cancelled.
    */
   async cancel(jobId: QueueJobId): Promise<void> {
-    await this.request<void>("DELETE", `/jobs/${jobId}`);
+    await this.request("DELETE", `/jobs/${jobId}`);
   }
 
-  private async request<T>(
+  private async request(
     method: "POST" | "DELETE",
     path: string,
     body?: object,
-  ): Promise<T> {
+  ): Promise<Response> {
     const endpoint = await this.pluginInstance.getEndpoint(path);
 
     const response = await fetch(endpoint, {
@@ -161,10 +161,12 @@ export class JetQueue<
     });
 
     if (response.ok) {
-      return response.json();
+      return response;
     } else {
       const errorBody = await response.json();
-      throw new Error("Request failed", { cause: errorBody });
+      throw new Error("Request failed", {
+        cause: JSON.stringify(errorBody, undefined, 2),
+      });
     }
   }
 
