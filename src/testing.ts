@@ -3,9 +3,17 @@ import {
   EnqueueFunction,
   ListenFunction,
 } from "./use-queue.ts";
-import { JetQueueOptions, QueueJob, QueueJobId } from "./types.ts";
+import {
+  EnqueueOptions,
+  JetQueueOptions,
+  QueueJob,
+  QueueJobId,
+} from "./types.ts";
 
-let jobs: Array<[string, QueueJob<Record<string, unknown>>]> = [];
+type maybeOptions =
+  | Partial<EnqueueOptions<string, Record<string, unknown>>>
+  | undefined;
+let jobs: Array<[string, QueueJob<Record<string, unknown>>, maybeOptions]> = [];
 let jobIdCounter: QueueJobId = BigInt(1);
 
 export function makeTestingFunctions<
@@ -16,12 +24,11 @@ export function makeTestingFunctions<
 ) {
   const enqueue: EnqueueFunction<T> = function (
     args,
-    _options,
+    options,
   ): ReturnType<EnqueueFunction<T>> {
     const jobId: QueueJobId = jobIdCounter;
     jobIdCounter = jobIdCounter + BigInt(1);
-    jobs.push([queue, { id: jobId, args }]);
-
+    jobs.push([queue, { id: jobId, args }, options]);
     return Promise.resolve({
       id: jobId,
       is_conflict: false,
@@ -63,18 +70,32 @@ export function getJobs() {
 export function findEnqueuedJob(
   expectedQueue: string,
   expectedArgs: Record<string, unknown>,
-): QueueJob<Record<string, unknown>> | undefined {
-  return jobs.find(([queue, job]) => {
+  expectOptions?: maybeOptions,
+): [string, QueueJob<Record<string, unknown>>, maybeOptions] | undefined {
+  return jobs.find(([queue, job, options]) => {
     if (queue !== expectedQueue) return false;
 
-    return Object.entries(expectedArgs).every(([key, value]) => {
-      const argValue = job.args[key];
+    const argsMatched = matchObject(job.args, expectedArgs);
 
-      if (argValue instanceof Date && value instanceof Date) {
-        return argValue.getTime() === value.getTime();
-      } else {
-        return argValue === value;
-      }
-    });
-  })?.[1];
+    const optionsMatched = expectOptions === undefined ||
+      matchObject(options, expectOptions);
+
+    return argsMatched && optionsMatched;
+  });
+}
+
+function compareValues(a: unknown, b: unknown): boolean {
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+  return a === b;
+}
+
+function matchObject(
+  source: Record<string, unknown> | undefined,
+  target: Record<string, unknown>,
+): boolean {
+  return !Object.entries(target).some(([key, value]) =>
+    !compareValues(source !== undefined ? source[key] : undefined, value)
+  );
 }

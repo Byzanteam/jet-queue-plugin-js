@@ -29,7 +29,35 @@ describe("Queue Testing Functions", () => {
 
     const foundJob = findEnqueuedJob("testQueue", jobArgs);
     assert(foundJob, "Job should be found");
-    assertEquals(foundJob?.args, jobArgs, "Found job args should match");
+    assertEquals(foundJob?.[1].args, jobArgs, "Found job args should match");
+  });
+
+  it("should correctly handle the scheduleAt in options when enqueueing and finding a job", async () => {
+    const { enqueue } = makeTestingFunctions("testQueue", { instanceName: "" });
+    const jobArgs = { task: "testTask" };
+    const scheduledAt = new Date();
+
+    await enqueue(jobArgs, { scheduledAt });
+
+    const jobs = getJobs();
+
+    assertEquals(jobs.length, 1, "There should be one job enqueued");
+
+    assertEquals(
+      jobs[0][2]?.scheduledAt?.getTime(),
+      scheduledAt.getTime(),
+      "Enqueued job scheduleAt should match",
+    );
+
+    const foundJob = findEnqueuedJob("testQueue", jobArgs, { scheduledAt });
+
+    assert(foundJob, "Job should be found");
+
+    assertEquals(
+      foundJob?.[2]?.scheduledAt?.getTime(),
+      scheduledAt.getTime(),
+      "Found job scheduledAt should match",
+    );
   });
 
   it("should handle clearing jobs correctly", () => {
