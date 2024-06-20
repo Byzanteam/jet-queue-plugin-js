@@ -37,7 +37,7 @@ describe("Queue Testing Functions", () => {
     const jobArgs = { task: "testTask" };
     const scheduledAt = new Date();
 
-    await enqueue(jobArgs, { scheduledAt });
+    await enqueue(jobArgs, { scheduledAt, replace: { all: ["scheduled_at"] } });
 
     const jobs = getJobs();
 
@@ -57,6 +57,11 @@ describe("Queue Testing Functions", () => {
       foundJob?.[2]?.scheduledAt?.getTime(),
       scheduledAt.getTime(),
       "Found job scheduledAt should match",
+    );
+
+    assertEquals(
+      foundJob?.[2]?.replace,
+      { all: ["scheduled_at"] },
     );
   });
 

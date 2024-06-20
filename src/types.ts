@@ -29,6 +29,27 @@ interface UniqueOptions<T extends string> {
   timestamp: "inserted_at" | "scheduled_at";
 }
 
+type ReplacementOption =
+  | "args"
+  | "max_attempts"
+  | "meta"
+  | "priority"
+  | "queue"
+  | "scheduled_at"
+  | "tags";
+
+type ReplacementOptionsByJobState = Partial<
+  Record<JobState, ReplacementOption[]>
+>;
+
+type ReplacementOptionsUniversal = {
+  all: ReplacementOption[];
+};
+
+type ReplacementOptions =
+  | ReplacementOptionsUniversal
+  | ReplacementOptionsByJobState;
+
 /**
  * Options for enqueuing jobs.
  * See detail at {@link https://hexdocs.pm/oban/Oban.Job.html#new/2}
@@ -53,6 +74,17 @@ export interface EnqueueOptions<
   scheduledAt: Date;
   /** the number of seconds until the job should be executed */
   scheduleIn: number;
+
+  /** `replace` property specification:
+   * Defines replacement rules for job states when a duplicate job is enqueued.
+   * It offers different strategies, such as replacing certain state options with new ones.
+   * This field can either specify options for all job states via an 'all' key,
+   * or provide specific replacement settings for individual job states.
+   * Each state can have an array of replaceable keys such as 'args', 'meta', and others.
+   * If the 'all' key is used, it excludes the use of any state-specific keys, instructing
+   * the system to apply the same replacement rules to all states equally.
+   */
+  replace: ReplacementOptions;
 
   /** a keyword list of options specifying how uniqueness will be calculated.
    * The options define which fields will be used,
