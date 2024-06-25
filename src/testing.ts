@@ -8,6 +8,9 @@ import {
   JetQueueOptions,
   QueueJob,
   QueueJobId,
+  ReplacementOption,
+  ReplacementOptions,
+  UniqueOptions,
 } from "./types.ts";
 
 type maybeOptions =
@@ -26,6 +29,24 @@ export function makeTestingFunctions<
     args,
     options,
   ): ReturnType<EnqueueFunction<T>> {
+    // NOTE: 这里目前只能支持 args 冲突检测
+    const existingJobIndex = jobs.findIndex(([_, job, _existingOptions]) =>
+      matchUnique(args, job.args, options?.unique)
+    );
+
+    if (existingJobIndex !== -1 && options?.replace) {
+      const updateJob = handleReplacement(
+        jobs[existingJobIndex],
+        args,
+        options,
+      );
+      jobs[existingJobIndex] = updateJob;
+      return Promise.resolve({
+        id: updateJob[1].id,
+        is_conflict: false,
+      });
+    }
+
     const jobId: QueueJobId = jobIdCounter;
     jobIdCounter = jobIdCounter + BigInt(1);
     jobs.push([queue, { id: jobId, args }, options]);
@@ -98,4 +119,61 @@ function matchObject(
   return !Object.entries(target).some(([key, value]) =>
     !compareValues(source !== undefined ? source[key] : undefined, value)
   );
+}
+
+function matchUnique(
+  args: Record<string, unknown>,
+  jobArgs: Record<string, unknown>,
+  unique?: Partial<UniqueOptions<string>>,
+): boolean {
+  if (!unique || !unique.fields || !unique.keys) {
+    return false;
+  }
+
+  return unique.keys.every((key) => args[key] === jobArgs[key]);
+}
+
+function handleReplacement(
+  existingJob: [string, QueueJob<Record<string, unknown>>, maybeOptions],
+  args: Record<string, unknown>,
+  options: Partial<EnqueueOptions<string, Record<string, unknown>>>,
+): [string, QueueJob<Record<string, unknown>>, maybeOptions] {
+  const replaceOptions = options.replace! as ReplacementOptions;
+
+  if (Object.keys(replaceOptions).includes("all")) {
+    const { replace: _, ...newOptions } = existingJob[2]!;
+    existingJob[1].args = args;
+    existingJob[2] = newOptions;
+  } else {
+    // NOTE: 测试环境目前不支持区分状态的替换
+    const optionSet = new Set<ReplacementOption>();
+    for (const options of Object.values(replaceOptions)) {
+      if (options) {
+        options.forEach((option) => optionSet.add(option));
+      }
+    }
+    Array.from(optionSet).forEach((option) => {
+      switch (option) {
+        case "args":
+          existingJob[1].args = args;
+          break;
+        case "max_attempts":
+          existingJob[2]!.maxAttempts = options.maxAttempts;
+          break;
+        case "meta":
+          existingJob[2]!.meta = options.meta;
+          break;
+        case "priority":
+          existingJob[2]!.priority = options.priority;
+          break;
+        case "scheduled_at":
+          existingJob[2]!.scheduledAt = options.scheduledAt;
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  return existingJob;
 }

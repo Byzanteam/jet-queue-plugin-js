@@ -16,7 +16,7 @@ export interface QueueJob<T extends Record<string, unknown>> {
   args: Readonly<T>;
 }
 
-interface UniqueOptions<T extends string> {
+export interface UniqueOptions<T extends string> {
   /** a list of fields to use for uniqueness calculations */
   fields: ReadonlyArray<"args" | "meta" | "queue">;
   /** a list of arg or meta keys to use for uniqueness calculations */
@@ -29,7 +29,7 @@ interface UniqueOptions<T extends string> {
   timestamp: "inserted_at" | "scheduled_at";
 }
 
-type ReplacementOption =
+export type ReplacementOption =
   | "args"
   | "max_attempts"
   | "meta"
@@ -46,7 +46,7 @@ type ReplacementOptionsUniversal = {
   all: ReplacementOption[];
 };
 
-type ReplacementOptions =
+export type ReplacementOptions =
   | ReplacementOptionsUniversal
   | ReplacementOptionsByJobState;
 
