@@ -107,7 +107,8 @@ describe("Queue Testing Functions", () => {
 
     // 正常新入队任务
     await enqueue({ id: "projectIdTwo" }, {
-      scheduledAt: new Date(),
+      scheduledAt: new Date("2024-04-01"),
+      meta: { name: "Joh" },
     });
 
     // 验证是否新入队任务成功
@@ -118,6 +119,25 @@ describe("Queue Testing Functions", () => {
       scheduledJob?.[2]?.scheduledAt,
       "ScheduledAt should be present in the scheduled job",
     );
+
+    // 通过 meta 校验冲突
+    const queueInfoTwo = await enqueue({ id: "projectIdTwo" }, {
+      meta: { name: "Joh" },
+      scheduledAt: new Date("2024-04-02"),
+      unique: { fields: ["meta"], keys: ["name"] },
+      replace: { scheduled: ["scheduled_at"] },
+    });
+
+    // 验证是否 replace 成功
+    const updatedScheduledJob = findEnqueuedJob("testQueue", {
+      id: "projectIdTwo",
+    });
+    assert(updatedScheduledJob, "Updated scheduled job should be found");
+
+    assertEquals(updatedScheduledJob[2]?.scheduledAt, new Date("2024-04-02"));
+    //验证是否是同一个任务
+    assertEquals(queueInfoTwo.is_conflict, true, "is_conflict should be true");
+    assertEquals(scheduledJob?.[1].id, queueInfoTwo.id);
   });
 
   it("should handle clearing jobs correctly", () => {

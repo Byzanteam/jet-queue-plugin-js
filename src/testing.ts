@@ -29,9 +29,15 @@ export function makeTestingFunctions<
     args,
     options,
   ): ReturnType<EnqueueFunction<T>> {
-    // NOTE: 这里目前只能支持 args 冲突检测
-    const existingJobIndex = jobs.findIndex(([_, job, _existingOptions]) =>
-      isConflict(args, job.args, options?.unique)
+    // NOTE: 这里目前只能支持 args 和 meta 冲突检测
+    const existingJobIndex = jobs.findIndex(([_, job, existingOptions]) =>
+      isConflict(
+        args,
+        job.args,
+        options?.unique,
+        options?.meta,
+        existingOptions?.meta,
+      )
     );
 
     if (existingJobIndex !== -1 && options?.replace) {
@@ -125,16 +131,30 @@ function isConflict(
   args: Record<string, unknown>,
   jobArgs: Record<string, unknown>,
   unique?: Partial<UniqueOptions<string>>,
+  meta?: Record<string, unknown>,
+  jobMeta?: Record<string, unknown>,
 ): boolean {
-  if (!unique || !unique.fields || !unique.keys) {
+  if (!unique?.fields || !unique?.keys) {
     return false;
   }
 
-  if (unique.fields.includes("meta") || unique.fields.includes("queue")) {
-    throw new Error("Unsupported unique fields");
+  if (unique.fields.includes("queue")) {
+    throw new Error("Unsupported unique fields: queue is not supported");
   }
 
-  return unique.keys.every((key) => args[key] === jobArgs[key]);
+  const isEqual = (a: unknown, b: unknown) => a === b;
+
+  return unique.keys.every((key) => {
+    if (unique.fields!.includes("meta") && unique.fields!.includes("args")) {
+      return isEqual(args[key], jobArgs[key]) &&
+        isEqual(meta?.[key], jobMeta?.[key]);
+    }
+
+    return (unique.fields!.includes("args") &&
+      isEqual(args[key], jobArgs[key])) ||
+      (unique.fields!.includes("meta") &&
+        isEqual(meta?.[key], jobMeta?.[key]));
+  });
 }
 
 function handleReplacement(
