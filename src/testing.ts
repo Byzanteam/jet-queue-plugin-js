@@ -31,7 +31,7 @@ export function makeTestingFunctions<
   ): ReturnType<EnqueueFunction<T>> {
     // NOTE: 这里目前只能支持 args 和 meta 冲突检测
     const existingJobIndex = jobs.findIndex(([_, job, existingOptions]) =>
-      isConflict(
+      checkConflict(
         args,
         job.args,
         options?.unique,
@@ -40,7 +40,9 @@ export function makeTestingFunctions<
       )
     );
 
-    if (existingJobIndex !== -1 && options?.replace) {
+    const isConflict = existingJobIndex !== -1;
+
+    if (isConflict && options?.replace) {
       const updateJob = handleReplacement(
         jobs[existingJobIndex],
         args,
@@ -58,7 +60,7 @@ export function makeTestingFunctions<
     jobs.push([queue, { id: jobId, args }, options]);
     return Promise.resolve({
       id: jobId,
-      is_conflict: false,
+      is_conflict: isConflict ? true : false,
     });
   };
 
@@ -127,7 +129,7 @@ function matchObject(
   );
 }
 
-function isConflict(
+function checkConflict(
   args: Record<string, unknown>,
   jobArgs: Record<string, unknown>,
   unique?: Partial<UniqueOptions<string>>,
