@@ -162,7 +162,11 @@ function handleReplacement(
   args: Record<string, unknown>,
   options: Partial<EnqueueOptions<string, Record<string, unknown>>>,
 ): [string, QueueJob<Record<string, unknown>>, maybeOptions] {
-  const replaceOptions = options.replace! as ReplacementOptions;
+  if (options.replace === undefined) {
+    return existingJob;
+  }
+
+  const replaceOptions = options.replace as ReplacementOptions;
 
   if (Object.hasOwn(replaceOptions, "all")) {
     const { replace: _, ...newOptions } = existingJob[2]!;
