@@ -31,7 +31,7 @@ export function makeTestingFunctions<
   ): ReturnType<EnqueueFunction<T>> {
     // NOTE: 这里目前只能支持 args 冲突检测
     const existingJobIndex = jobs.findIndex(([_, job, _existingOptions]) =>
-      matchUnique(args, job.args, options?.unique)
+      isConflict(args, job.args, options?.unique)
     );
 
     if (existingJobIndex !== -1 && options?.replace) {
@@ -43,7 +43,7 @@ export function makeTestingFunctions<
       jobs[existingJobIndex] = updateJob;
       return Promise.resolve({
         id: updateJob[1].id,
-        is_conflict: false,
+        is_conflict: true,
       });
     }
 
@@ -121,13 +121,17 @@ function matchObject(
   );
 }
 
-function matchUnique(
+function isConflict(
   args: Record<string, unknown>,
   jobArgs: Record<string, unknown>,
   unique?: Partial<UniqueOptions<string>>,
 ): boolean {
   if (!unique || !unique.fields || !unique.keys) {
     return false;
+  }
+
+  if (unique.fields.includes("meta") || unique.fields.includes("queue")) {
+    throw new Error("Unsupported unique fields");
   }
 
   return unique.keys.every((key) => args[key] === jobArgs[key]);
@@ -140,7 +144,7 @@ function handleReplacement(
 ): [string, QueueJob<Record<string, unknown>>, maybeOptions] {
   const replaceOptions = options.replace! as ReplacementOptions;
 
-  if (Object.keys(replaceOptions).includes("all")) {
+  if (Object.hasOwn(replaceOptions, "all")) {
     const { replace: _, ...newOptions } = existingJob[2]!;
     existingJob[1].args = args;
     existingJob[2] = newOptions;

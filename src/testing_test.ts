@@ -69,37 +69,55 @@ describe("Queue Testing Functions", () => {
     );
   });
 
-  it("should handle replacement correctly", async () => {
+  it("should handle job priority replacement correctly", async () => {
     const { enqueue } = makeTestingFunctions("testQueue", { instanceName: "" });
-    const jobArgs = { id: "projectId" };
-    const jobArgsTwo = { id: "projectIdTwo" };
 
-    await enqueue(jobArgs, {
+    // 初始化队列任务
+    await enqueue({ id: "projectId" }, {
       priority: 1,
     });
 
-    const foundJob = findEnqueuedJob("testQueue", jobArgs);
-    assert(foundJob, "Job should be found");
-    assertEquals(foundJob?.[2]?.priority, 1, "Priority should be 1");
+    // 验证队列任务是否插入成功
+    const initialJob = findEnqueuedJob("testQueue", { id: "projectId" });
+    assert(initialJob, "Initial job should be found");
+    assertEquals(
+      initialJob?.[2]?.priority,
+      1,
+      "Initial job's priority should be 1",
+    );
 
-    await enqueue(jobArgs, {
+    // replace 队列任务的 priority
+    const queueInfo = await enqueue({ id: "projectId" }, {
       priority: 2,
       unique: { fields: ["args"], keys: ["id"] },
       replace: { available: ["priority"] },
     });
 
-    const foundJobTwo = findEnqueuedJob("testQueue", jobArgs);
-    assert(foundJobTwo, "Job should be found");
-    assertEquals(foundJobTwo?.[2]?.priority, 2, "Priority should be 2");
+    // 验证是否 replace 成功
+    const updatedJob = findEnqueuedJob("testQueue", { id: "projectId" });
+    assert(updatedJob, "Updated job should be set");
+    assertEquals(
+      updatedJob?.[2]?.priority,
+      2,
+      "Updated job's priority should be 2",
+    );
+    // 验证是否是同一个任务
+    assertEquals(queueInfo.is_conflict, true, "is_conflict should be true");
+    assertEquals(initialJob?.[1].id, queueInfo.id);
 
-    await enqueue(jobArgsTwo, {
+    // 正常新入队任务
+    await enqueue({ id: "projectIdTwo" }, {
       scheduledAt: new Date(),
     });
 
+    // 验证是否新入队任务成功
     assertEquals(getJobs().length, 2, "There should be two jobs enqueued");
-    const foundJobThree = findEnqueuedJob("testQueue", jobArgsTwo);
-    assert(foundJobThree, "Job should be found");
-    assert(foundJobThree?.[2]?.scheduledAt, "ScheduledAt should be found");
+    const scheduledJob = findEnqueuedJob("testQueue", { id: "projectIdTwo" });
+    assert(scheduledJob, "Scheduled job should be found");
+    assert(
+      scheduledJob?.[2]?.scheduledAt,
+      "ScheduledAt should be present in the scheduled job",
+    );
   });
 
   it("should handle clearing jobs correctly", () => {
