@@ -1,6 +1,6 @@
 import { JetQueue } from "./queue.ts";
 import { makeTestingFunctions } from "./testing.ts";
-import { JetQueueOptions } from "./types.ts";
+import type { JetQueueOptions } from "./types.ts";
 
 export enum JetQueueMode {
   Plugin,

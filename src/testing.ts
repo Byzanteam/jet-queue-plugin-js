@@ -1,9 +1,9 @@
-import {
+import type {
   CancelFunction,
   EnqueueFunction,
   ListenFunction,
 } from "./use-queue.ts";
-import {
+import type {
   EnqueueOptions,
   JetQueueOptions,
   QueueJob,
