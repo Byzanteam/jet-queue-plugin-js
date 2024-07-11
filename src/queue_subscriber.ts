@@ -1,4 +1,9 @@
-import type { AckMessage, JobsMessage, ListenPerform, QueueJob } from "./types.ts";
+import type {
+  AckMessage,
+  JobsMessage,
+  ListenPerform,
+  QueueJob,
+} from "./types.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
 export class QueueSubscriber<T extends Record<string, unknown>> {
