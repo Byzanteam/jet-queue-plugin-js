@@ -192,7 +192,7 @@ export class JetQueue<
    *
    *     ack({
    *       type: "ack",
-   *       payload: [{ id: job.id, code: "ok" }]
+   *       payload: [{ id: job.id, queue: "default", code: "ok" }]
    *     });
    *   }
    *

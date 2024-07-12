@@ -45,7 +45,7 @@ export class QueueSubscriber<T extends Record<string, unknown>> {
    *     console.log(job);
    *     ack({
    *       type: "ack",
-   *       payload: [{ id: job.id, code: "ok" }],
+   *       payload: [{ id: job.id, queue: "queue1", code: "ok" }],
    *     });
    *   }
    * };
