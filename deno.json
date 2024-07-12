@@ -1,8 +1,11 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
   "name": "@byzanteam/jet-queue-plugin-js",
-  "version": "0.2.0",
-  "exports": "./mod.ts",
+  "version": "0.2.1",
+  "exports": {
+    ".": "./mod.ts",
+    "./testing": "./testing.ts"
+  },
   "compilerOptions": {
     "strict": true,
     "useUnknownInCatchVariables": true,

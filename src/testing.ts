@@ -63,7 +63,11 @@ export function clearJobs() {
   jobs = [];
 }
 
-export function getJobs() {
+export function getJobs(): [
+  string,
+  QueueJob<Record<string, unknown>>,
+  maybeOptions,
+][] {
   return jobs;
 }
 
