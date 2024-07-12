@@ -161,7 +161,7 @@ export interface AckMessage {
 }
 
 type AckMessagePayload =
-  | { id: QueueJobId; code: "ok" }
-  | { id: QueueJobId; code: "error" | "cancel"; data: string }
-  | { id: QueueJobId; code: "discard"; data?: string }
-  | { id: QueueJobId; code: "snooze"; data: number };
+  | { id: QueueJobId; queue: string; code: "ok" }
+  | { id: QueueJobId; queue: string; code: "error" | "cancel"; data: string }
+  | { id: QueueJobId; queue: string; code: "discard"; data?: string }
+  | { id: QueueJobId; queue: string; code: "snooze"; data: number };
