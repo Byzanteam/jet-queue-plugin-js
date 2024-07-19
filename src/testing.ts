@@ -28,10 +28,12 @@ export function makeTestingFunctions<
   ): ReturnType<EnqueueFunction<T>> {
     const jobId: QueueJobId = jobIdCounter;
     jobIdCounter = jobIdCounter + BigInt(1);
-    jobs.push([queue, { id: jobId, args }, options]);
+    jobs.push([queue, { id: jobId, args, is_conflict: false, queue }, options]);
     return Promise.resolve({
       id: jobId,
       is_conflict: false,
+      args,
+      queue,
     });
   };
 
