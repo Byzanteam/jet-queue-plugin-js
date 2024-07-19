@@ -6,15 +6,14 @@ export interface JetQueueOptions {
 
 export type QueueJobId = bigint;
 
-export interface EnqueueJobResponse {
-  id: QueueJobId;
-  is_conflict: boolean;
-}
-
 export interface QueueJob<T extends Record<string, unknown>> {
   id: QueueJobId;
   args: Readonly<T>;
+  is_conflict: boolean;
+  queue: string;
 }
+
+export type EnqueueJobResponse = QueueJob<Record<string, unknown>>;
 
 interface UniqueOptions<T extends string> {
   /** a list of fields to use for uniqueness calculations */
