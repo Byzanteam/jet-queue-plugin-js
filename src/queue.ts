@@ -14,16 +14,21 @@ import { messagesStream } from "./ws-event-generator.ts";
 export class JetQueue<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
-  private pluginInstance: BreezeRuntime.Plugin;
+  #queue: string;
+  #options: JetQueueOptions;
+  #pluginInstance: BreezeRuntime.Plugin | undefined;
 
-  constructor(private queue: string, options: JetQueueOptions) {
-    const pluginInstance = BreezeRuntime.plugins[options.instanceName];
+  constructor(queue: string, options: JetQueueOptions) {
+    this.#queue = queue;
+    this.#options = options;
+  }
 
-    if (!pluginInstance) {
-      throw new Error(`Plugin ${options.instanceName} not found`);
+  get pluginInstance(): BreezeRuntime.Plugin {
+    if (!this.#pluginInstance) {
+      this.#pluginInstance = BreezeRuntime.plugins[this.#options.instanceName];
     }
 
-    this.pluginInstance = pluginInstance;
+    return this.#pluginInstance;
   }
 
   /**
@@ -118,7 +123,7 @@ export class JetQueue<
     return await this.request("POST", "/jobs", {
       args,
       options: {
-        queue: this.queue,
+        queue: this.#queue,
         ...normalizedOptions,
       },
     }).then((res) => res.json());
@@ -234,7 +239,7 @@ export class JetQueue<
     const endpoint = await this.pluginInstance.getEndpoint("/websocket");
 
     endpoint.search = new URLSearchParams({
-      queue: this.queue,
+      queue: this.#queue,
       size: bufferSize.toString(),
     }).toString();
 

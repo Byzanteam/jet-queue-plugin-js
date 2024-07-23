@@ -1,107 +1,126 @@
-import type {
-  CancelFunction,
-  EnqueueFunction,
-  ListenFunction,
-} from "./use-queue.ts";
-import type {
-  EnqueueOptions,
-  JetQueueOptions,
-  QueueJob,
-  QueueJobId,
-} from "./types.ts";
+// deno-lint-ignore-file no-explicit-any
+import type { JetQueue } from "./queue.ts";
 
-type maybeOptions =
-  | Partial<EnqueueOptions<string, Record<string, unknown>>>
-  | undefined;
-let jobs: Array<[string, QueueJob<Record<string, unknown>>, maybeOptions]> = [];
-let jobIdCounter: QueueJobId = BigInt(1);
+type Stub = any;
+type ExpectedSpyCall = any;
 
-export function makeTestingFunctions<
+export type EnqueueFunction<T extends Record<string, unknown>> = JetQueue<
+  T
+>["enqueue"];
+export type ListenFunction<T extends Record<string, unknown>> = JetQueue<
+  T
+>["listen"];
+export type CancelFunction<T extends Record<string, unknown>> = JetQueue<
+  T
+>["cancel"];
+
+export type QueueInternals<T extends Record<string, unknown>> = {
+  enqueue: EnqueueFunction<T>;
+  cancel: CancelFunction<T>;
+};
+
+let uniqueNumber: number = 0;
+
+function generateJobId(): bigint {
+  return BigInt(uniqueNumber++);
+}
+
+function defaultEnqueueStubFunc(
+  queue: string,
+): EnqueueFunction<Record<string, unknown>> {
+  return (args, _options) => {
+    return Promise.resolve({
+      id: generateJobId(),
+      is_conflict: false,
+      queue: queue,
+      args: args,
+    });
+  };
+}
+
+function defaultCancelStubFunc(
+  _queue: string,
+): CancelFunction<Record<string, unknown>> {
+  return async () => {};
+}
+
+export function setupQueue<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
   queue: string,
-  _options: JetQueueOptions,
+  queueInternals: QueueInternals<T>,
+  options: {
+    beforeEach: (...args: any[]) => any;
+    afterEach: (...args: any[]) => any;
+    assertSpyCall: (...args: any[]) => any;
+    assertSpyCalls: (...args: any[]) => any;
+    stub: (...args: any[]) => any;
+  },
+  overwrites?: Partial<QueueInternals<T>>,
 ) {
-  const enqueue: EnqueueFunction<T> = function (
-    args,
-    options,
-  ): ReturnType<EnqueueFunction<T>> {
-    const jobId: QueueJobId = jobIdCounter;
-    jobIdCounter = jobIdCounter + BigInt(1);
-    jobs.push([queue, { id: jobId, args, is_conflict: false, queue }, options]);
-    return Promise.resolve({
-      id: jobId,
-      is_conflict: false,
-      args,
-      queue,
-    });
-  };
+  let enqueueStub: Stub | undefined;
+  let cancelStub: Stub | undefined;
 
-  const listen: ListenFunction<T> = function (
-    _perform,
-    _options,
-  ): ReturnType<ListenFunction<T>> {
-    return Promise.reject("Not implemented in testing");
-  };
+  options.beforeEach(() => {
+    overwritesQueueInternals(overwrites);
+  });
 
-  const cancel: CancelFunction<T> = function (
-    jobId: QueueJobId,
-  ): ReturnType<CancelFunction<T>> {
-    const index = jobs.findIndex(([_, job]) => job.id === jobId);
-    if (index !== -1) {
-      jobs.splice(index, 1);
+  options.afterEach(restoreStubs);
+
+  function restoreStubs() {
+    enqueueStub?.restore();
+    cancelStub?.restore();
+
+    enqueueStub = undefined;
+    cancelStub = undefined;
+  }
+
+  function getStubedFunction(
+    functionName: "enqueue" | "cancel",
+  ): Stub {
+    switch (functionName) {
+      case "enqueue":
+        return enqueueStub!;
+
+      case "cancel":
+        return cancelStub!;
     }
-    return Promise.resolve();
-  };
+  }
+
+  function assertQueueCall(
+    functionName: "enqueue" | "cancel",
+    callIndex: number,
+    expected?: ExpectedSpyCall,
+  ) {
+    options.assertSpyCall(getStubedFunction(functionName), callIndex, expected);
+  }
+
+  function assertQueueCalls(
+    functionName: "enqueue" | "cancel",
+    expectedCalls: number,
+  ) {
+    options.assertSpyCalls(getStubedFunction(functionName), expectedCalls);
+  }
+
+  function overwritesQueueInternals(overwrites?: Partial<QueueInternals<T>>) {
+    restoreStubs();
+
+    enqueueStub = options.stub(
+      queueInternals,
+      "enqueue",
+      overwrites?.enqueue || defaultEnqueueStubFunc(queue),
+    );
+
+    cancelStub = options.stub(
+      queueInternals,
+      "cancel",
+      overwrites?.cancel || defaultCancelStubFunc(queue),
+    );
+  }
 
   return {
-    enqueue,
-    listen,
-    cancel,
+    assertQueueCall,
+    assertQueueCalls,
+    overwritesQueueInternals,
   };
-}
-
-export function clearJobs() {
-  jobs = [];
-}
-
-export function getJobs(): [
-  string,
-  QueueJob<Record<string, unknown>>,
-  maybeOptions,
-][] {
-  return jobs;
-}
-
-export function findEnqueuedJob(
-  expectedQueue: string,
-  expectedArgs: Record<string, unknown>,
-  expectOptions?: maybeOptions,
-): [string, QueueJob<Record<string, unknown>>, maybeOptions] | undefined {
-  return jobs.find(([queue, job, options]) => {
-    if (queue !== expectedQueue) return false;
-
-    const argsMatched = matchObject(job.args, expectedArgs);
-
-    const optionsMatched = expectOptions === undefined ||
-      matchObject(options, expectOptions);
-
-    return argsMatched && optionsMatched;
-  });
-}
-
-function compareValues(a: unknown, b: unknown): boolean {
-  if (a instanceof Date && b instanceof Date) {
-    return a.getTime() === b.getTime();
-  }
-  return a === b;
-}
-
-function matchObject(
-  source: Record<string, unknown> | undefined,
-  target: Record<string, unknown>,
-): boolean {
-  return !Object.entries(target).some(([key, value]) =>
-    !compareValues(source !== undefined ? source[key] : undefined, value)
-  );
 }
