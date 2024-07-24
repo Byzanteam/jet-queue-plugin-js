@@ -4,20 +4,10 @@ import type { Queue } from "./queue.ts";
 type Stub = any;
 type ExpectedSpyCall = any;
 
-export type EnqueueFunction<T extends Record<string, unknown>> = Queue<
-  T
->["enqueue"];
-export type ListenFunction<T extends Record<string, unknown>> = Queue<
-  T
->["listen"];
-export type CancelFunction<T extends Record<string, unknown>> = Queue<
-  T
->["cancel"];
-
-export type QueueInternals<T extends Record<string, unknown>> = {
-  enqueue: EnqueueFunction<T>;
-  cancel: CancelFunction<T>;
-};
+export type QueueInternals<T extends Record<string, unknown>> = Pick<
+  Queue<T>,
+  "enqueue" | "cancel"
+>;
 
 let uniqueNumber: number = 0;
 
@@ -27,7 +17,7 @@ function generateJobId(): bigint {
 
 function defaultEnqueueStubFunc(
   queue: string,
-): EnqueueFunction<Record<string, unknown>> {
+): QueueInternals<Record<string, unknown>>["enqueue"] {
   return (args, _options) => {
     return Promise.resolve({
       id: generateJobId(),
@@ -40,7 +30,7 @@ function defaultEnqueueStubFunc(
 
 function defaultCancelStubFunc(
   _queue: string,
-): CancelFunction<Record<string, unknown>> {
+): QueueInternals<Record<string, unknown>>["cancel"] {
   return async () => {};
 }
 
@@ -57,7 +47,18 @@ export function setupQueue<
     stub: (...args: any[]) => any;
   },
   overwrites?: Partial<QueueInternals<T>>,
-) {
+): {
+  assertQueueCall: (
+    functionName: keyof QueueInternals<T>,
+    callIndex: number,
+    expected?: ExpectedSpyCall,
+  ) => void;
+  assertQueueCalls: (
+    functionName: keyof QueueInternals<T>,
+    expectedCalls: number,
+  ) => void;
+  overwritesQueueInternals: (overwrites?: Partial<QueueInternals<T>>) => void;
+} {
   let enqueueStub: Stub | undefined;
   let cancelStub: Stub | undefined;
 
@@ -76,7 +77,7 @@ export function setupQueue<
   }
 
   function getStubedFunction(
-    functionName: "enqueue" | "cancel",
+    functionName: keyof QueueInternals<T>,
   ): Stub {
     switch (functionName) {
       case "enqueue":
@@ -88,7 +89,7 @@ export function setupQueue<
   }
 
   function assertQueueCall(
-    functionName: "enqueue" | "cancel",
+    functionName: keyof QueueInternals<T>,
     callIndex: number,
     expected?: ExpectedSpyCall,
   ) {
@@ -96,7 +97,7 @@ export function setupQueue<
   }
 
   function assertQueueCalls(
-    functionName: "enqueue" | "cancel",
+    functionName: keyof QueueInternals<T>,
     expectedCalls: number,
   ) {
     options.assertSpyCalls(getStubedFunction(functionName), expectedCalls);
