@@ -2,28 +2,33 @@ import type {
   AckMessage,
   EnqueueJobResponse,
   EnqueueOptions,
-  JetQueueOptions,
   JobsMessage,
   ListenOptions,
   ListenPerform,
   QueueJob,
   QueueJobId,
+  QueueOptions,
 } from "./types.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
-export class JetQueue<
+export class Queue<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
-  private pluginInstance: BreezeRuntime.Plugin;
+  #queue: string;
+  #options: QueueOptions;
+  #pluginInstance: BreezeRuntime.Plugin | undefined;
 
-  constructor(private queue: string, options: JetQueueOptions) {
-    const pluginInstance = BreezeRuntime.plugins[options.instanceName];
+  constructor(queue: string, options: QueueOptions) {
+    this.#queue = queue;
+    this.#options = options;
+  }
 
-    if (!pluginInstance) {
-      throw new Error(`Plugin ${options.instanceName} not found`);
+  get pluginInstance(): BreezeRuntime.Plugin {
+    if (!this.#pluginInstance) {
+      this.#pluginInstance = BreezeRuntime.plugins[this.#options.instanceName];
     }
 
-    this.pluginInstance = pluginInstance;
+    return this.#pluginInstance;
   }
 
   /**
@@ -37,26 +42,26 @@ export class JetQueue<
    *
    * Enqueue a job with the `default` queue:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.enqueue({ id: 1, user_id: 2 });
    * ```
    *
    * Schedule a job to run in 5 minutes:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.enqueue({ id: 1 }, { scheduleIn: 5 * 60 });
    * ```
    *
    * Enqueue a job, ensuring that it is unique within the past minute:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * const unique = { period: 60 };
    * await queue.enqueue({ id: 1 }, { unique: unique });
    * ```
    *
    * Enqueue a unique job where the period is compared to the `scheduled_at` timestamp rather than `inserted_at`:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.enqueue({ id: 1 }, {
    *   unique: { period: 60, timestamp: "scheduled_at" },
    * });
@@ -64,7 +69,7 @@ export class JetQueue<
    *
    * Enqueue a unique job based only on the queue field, and within multiple states:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.enqueue({ id: 1 }, {
    *   unique: {
    *     period: 60,
@@ -82,7 +87,7 @@ export class JetQueue<
    *
    * Enqueue a unique job considering only the queue and specified keys in the args:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.enqueue({ account_id: 1, url: "https://example.com" }, {
    *   unique: {
    *     fields: ["args", "queue"],
@@ -93,7 +98,7 @@ export class JetQueue<
    *
    * Enqueue a unique job considering only specified keys in the meta:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.enqueue({ id: 1, name: "Alice" }, {
    *   meta: { slug: "unique-key" },
    *   unique: { fields: ["meta"], keys: ["slug", "id", "name"] },
@@ -118,7 +123,7 @@ export class JetQueue<
     return await this.request("POST", "/jobs", {
       args,
       options: {
-        queue: this.queue,
+        queue: this.#queue,
         ...normalizedOptions,
       },
     }).then((res) => res.json());
@@ -134,7 +139,7 @@ export class JetQueue<
    *
    * Cancel a job with a specific ID:
    * ```ts
-   * const queue = new JetQueue("default", { instanceName: "jetQueueInstance" });
+   * const queue = new Queue("default", { instanceName: "jetQueueInstance" });
    * await queue.cancel(123);
    * ```
    *
@@ -179,7 +184,7 @@ export class JetQueue<
    *
    * @example
    * ```ts
-   * const queue = new JetQueue('default');
+   * const queue = new Queue('default');
    *
    * function perform(
    *   jobs: ReadonlyArray<QueueJob>,
@@ -234,7 +239,7 @@ export class JetQueue<
     const endpoint = await this.pluginInstance.getEndpoint("/websocket");
 
     endpoint.search = new URLSearchParams({
-      queue: this.queue,
+      queue: this.#queue,
       size: bufferSize.toString(),
     }).toString();
 

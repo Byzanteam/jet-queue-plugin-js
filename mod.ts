@@ -2,7 +2,6 @@ export {
   type AckMessage,
   type EnqueueJobResponse,
   type EnqueueOptions,
-  type JetQueueOptions,
   type JobsMessage,
   JobState,
   type ListenOptions,
@@ -10,6 +9,7 @@ export {
   type ListenPerformOptions,
   type QueueJob,
   type QueueJobId,
+  type QueueOptions,
 } from "./src/types.ts";
-export { useQueue } from "./src/use-queue.ts";
+export { Queue } from "./src/queue.ts";
 export { QueueSubscriber } from "./src/queue_subscriber.ts";
