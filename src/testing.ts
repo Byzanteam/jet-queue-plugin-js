@@ -1,16 +1,16 @@
 // deno-lint-ignore-file no-explicit-any
-import type { JetQueue } from "./queue.ts";
+import type { Queue } from "./queue.ts";
 
 type Stub = any;
 type ExpectedSpyCall = any;
 
-export type EnqueueFunction<T extends Record<string, unknown>> = JetQueue<
+export type EnqueueFunction<T extends Record<string, unknown>> = Queue<
   T
 >["enqueue"];
-export type ListenFunction<T extends Record<string, unknown>> = JetQueue<
+export type ListenFunction<T extends Record<string, unknown>> = Queue<
   T
 >["listen"];
-export type CancelFunction<T extends Record<string, unknown>> = JetQueue<
+export type CancelFunction<T extends Record<string, unknown>> = Queue<
   T
 >["cancel"];
 

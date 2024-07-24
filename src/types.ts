@@ -1,6 +1,6 @@
 type EnumToConst<T extends string> = `${T}`;
 
-export interface JetQueueOptions {
+export interface QueueOptions {
   instanceName: string;
 }
 
