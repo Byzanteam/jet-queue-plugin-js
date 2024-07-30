@@ -20,7 +20,7 @@ interface UniqueOptions<T extends string> {
   fields: ReadonlyArray<"args" | "meta" | "queue">;
   /** a list of arg or meta keys to use for uniqueness calculations */
   keys: ReadonlyArray<T>;
-  /** a time period in seconds during which uniqueness will be enforced */
+  /** a time period in seconds during which uniqueness will be enforced, defaults to infinity */
   period: number;
   /** a list of states during which uniqueness will be enforced */
   states: ReadonlyArray<EnumToConst<JobState>>;

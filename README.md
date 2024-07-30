@@ -142,6 +142,8 @@ describe("Queue Tests", () => {
           },
           scheduledAt: new Date(),
           unique: {
+            //a time period in seconds during which uniqueness will be enforced, defaults to infinity
+            period: 60,
             fields: ["args"],
             keys: ["id"],
           },
