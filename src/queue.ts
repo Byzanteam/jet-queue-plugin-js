@@ -105,12 +105,9 @@ export class Queue<
    * });
    * ```
    */
-  async enqueue<
-    A extends Record<string, unknown>,
-    M extends Record<string, unknown> | undefined,
-  >(
-    args: Readonly<A>,
-    options?: Partial<EnqueueOptions<keyof A & string, M>>,
+  async enqueue<M extends Record<string, unknown> | undefined>(
+    args: Readonly<T>,
+    options?: Partial<EnqueueOptions<keyof T & string, M>>,
   ): Promise<EnqueueJobResponse> {
     let normalizedOptions: object;
 
