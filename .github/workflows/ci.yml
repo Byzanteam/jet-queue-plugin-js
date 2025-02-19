@@ -14,14 +14,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        deno: ["canary", "v1.x"]
+        deno: ["canary", "v2.x"]
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
           deno-version: ${{ matrix.deno }}
 
@@ -32,7 +32,7 @@ jobs:
         run: deno lint
 
       - name: Spell-check
-        if: matrix.deno == 'v1.x'
+        if: matrix.deno == 'v2.x'
         uses: crate-ci/typos@master
 
       - name: Type check project

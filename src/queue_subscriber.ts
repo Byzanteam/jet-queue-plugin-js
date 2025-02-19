@@ -4,24 +4,15 @@ import type {
   ListenPerform,
   QueueJob,
 } from "./types.ts";
+import { appendPath } from "./utils.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
 export class QueueSubscriber<T extends Record<string, unknown>> {
-  private pluginInstance: BreezeRuntime.Plugin;
-
   constructor(
     private queues: Array<{ name: string; bufferSize: number }>,
     private batchSize: number,
-    instanceName: string,
-  ) {
-    const pluginInstance = BreezeRuntime.plugins[instanceName];
-
-    if (!pluginInstance) {
-      throw new Error(`Plugin ${instanceName} not found`);
-    }
-
-    this.pluginInstance = pluginInstance;
-  }
+    private instanceName: string,
+  ) {}
 
   /**
    * Listen for jobs from multiple queues simultaneously.
@@ -80,11 +71,21 @@ export class QueueSubscriber<T extends Record<string, unknown>> {
   }
 
   private async listenSocket(queues: string): Promise<WebSocket> {
-    const endpoint = await this.pluginInstance.getEndpoint("/websocket");
+    const endpoint = await this.buildUrl("/websocket");
 
     endpoint.search = new URLSearchParams({ queues }).toString();
 
     return new WebSocket(endpoint);
+  }
+
+  private buildUrl(path: string = "/") {
+    const plugin = BreezeRuntime.getPlugin(this.instanceName);
+
+    if (!plugin) {
+      throw new Error(`plugin '${this.instanceName}' does not exist`);
+    } else {
+      return Promise.resolve(appendPath(plugin.endpoint, path));
+    }
   }
 
   private parseMessageData(data: string): Array<QueueJob<T>> {

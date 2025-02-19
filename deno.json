@@ -19,7 +19,7 @@
   ],
   "tasks": {
     "test": "deno test -A --permit-no-files --shuffle --parallel",
-    "lockfile:update": "deno cache --reload --lock=deno.lock --lock-write deps.ts dev_deps.ts && deno task check && deno task test",
+    "lockfile:update": "deno cache --frozen=false --reload deps.ts && deno task check && deno task test",
     "check:types": "deno check **/*.ts",
     "check": "deno fmt --check && deno lint && deno task check:types && deno task test"
   }

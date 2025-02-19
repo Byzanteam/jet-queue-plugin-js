@@ -9,6 +9,7 @@ import type {
   QueueJobId,
   QueueOptions,
 } from "./types.ts";
+import { appendPath } from "./utils.ts";
 import { messagesStream } from "./ws-event-generator.ts";
 
 export class Queue<
@@ -16,19 +17,10 @@ export class Queue<
 > {
   #queue: string;
   #options: QueueOptions;
-  #pluginInstance: BreezeRuntime.Plugin | undefined;
 
   constructor(queue: string, options: QueueOptions) {
     this.#queue = queue;
     this.#options = options;
-  }
-
-  get pluginInstance(): BreezeRuntime.Plugin {
-    if (!this.#pluginInstance) {
-      this.#pluginInstance = BreezeRuntime.plugins[this.#options.instanceName];
-    }
-
-    return this.#pluginInstance;
   }
 
   /**
@@ -151,16 +143,18 @@ export class Queue<
     path: string,
     body?: object,
   ): Promise<Response> {
-    const endpoint = await this.pluginInstance.getEndpoint(path);
-
-    const response = await fetch(endpoint, {
-      method,
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
+    const response = await BreezeRuntime.pluginFetch(
+      this.#options.instanceName,
+      path,
+      {
+        method,
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    });
+    );
 
     if (response.ok) {
       return response;
@@ -233,7 +227,7 @@ export class Queue<
   private async listenSocket(options: ListenOptions): Promise<WebSocket> {
     const { bufferSize } = options;
 
-    const endpoint = await this.pluginInstance.getEndpoint("/websocket");
+    const endpoint = await this.buildUrl("/websocket");
 
     endpoint.search = new URLSearchParams({
       queue: this.#queue,
@@ -241,6 +235,16 @@ export class Queue<
     }).toString();
 
     return new WebSocket(endpoint);
+  }
+
+  private buildUrl(path: string = "/") {
+    const plugin = BreezeRuntime.getPlugin(this.#options.instanceName);
+
+    if (!plugin) {
+      throw new Error(`plugin '${this.#options.instanceName}' does not exist`);
+    } else {
+      return Promise.resolve(appendPath(plugin.endpoint, path));
+    }
   }
 
   private parseMessageData(data: string): Array<QueueJob<T>> {
