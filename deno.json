@@ -11,7 +11,7 @@
     "useUnknownInCatchVariables": true,
     "noImplicitOverride": true,
     "types": [
-      "https://cdn.jsdelivr.net/gh/Byzanteam/breeze-js@latest/mod.d.ts"
+      "https://cdn.jsdelivr.net/gh/Byzanteam/breeze-js@0.3.1/mod.d.ts"
     ]
   },
   "exclude": [
