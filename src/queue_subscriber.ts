@@ -73,7 +73,12 @@ export class QueueSubscriber<T extends Record<string, unknown>> {
   private async listenSocket(queues: string): Promise<WebSocket> {
     const endpoint = await this.buildUrl("/websocket");
 
-    endpoint.search = new URLSearchParams({ queues }).toString();
+    endpoint.search = new URLSearchParams({
+      queues,
+      token: BreezeRuntime.generateToken({
+        plugin: this.instanceName,
+      }),
+    }).toString();
 
     return new WebSocket(endpoint);
   }

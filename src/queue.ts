@@ -232,6 +232,9 @@ export class Queue<
     endpoint.search = new URLSearchParams({
       queue: this.#queue,
       size: bufferSize.toString(),
+      token: BreezeRuntime.generateToken({
+        plugin: this.#options.instanceName,
+      }),
     }).toString();
 
     return new WebSocket(endpoint);
