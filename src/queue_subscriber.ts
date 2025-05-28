@@ -12,6 +12,7 @@ export class QueueSubscriber<T extends Record<string, unknown>> {
     private queues: Array<{ name: string; bufferSize: number }>,
     private batchSize: number,
     private instanceName: string,
+    private runtime: BreezeRuntime = BreezeRuntime,
   ) {}
 
   /**
@@ -75,7 +76,7 @@ export class QueueSubscriber<T extends Record<string, unknown>> {
 
     endpoint.search = new URLSearchParams({
       queues,
-      token: BreezeRuntime.generateToken({
+      token: this.runtime.generateToken({
         plugin: this.instanceName,
       }),
     }).toString();
@@ -84,7 +85,7 @@ export class QueueSubscriber<T extends Record<string, unknown>> {
   }
 
   private buildUrl(path: string = "/") {
-    const plugin = BreezeRuntime.getPlugin(this.instanceName);
+    const plugin = this.runtime.getPlugin(this.instanceName);
 
     if (!plugin) {
       throw new Error(`plugin '${this.instanceName}' does not exist`);
