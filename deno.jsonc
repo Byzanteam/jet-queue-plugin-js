@@ -1,5 +1,4 @@
 {
-  // "name": "@byzanteam/jet-queue-plugin-js",
   "compilerOptions": {
     "strict": true,
     "useUnknownInCatchVariables": true,
