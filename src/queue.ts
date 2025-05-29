@@ -15,13 +15,11 @@ import { messagesStream } from "./ws-event-generator.ts";
 export class Queue<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
-  #queue: string;
-  #options: QueueOptions;
-
-  constructor(queue: string, options: QueueOptions) {
-    this.#queue = queue;
-    this.#options = options;
-  }
+  constructor(
+    private queue: string,
+    private options: QueueOptions,
+    private runtime: BreezeRuntime = BreezeRuntime,
+  ) {}
 
   /**
    * Enqueue a job.
@@ -112,7 +110,7 @@ export class Queue<
     return await this.request("POST", "/jobs", {
       args,
       options: {
-        queue: this.#queue,
+        queue: this.queue,
         ...normalizedOptions,
       },
     }).then((res) => res.json());
@@ -143,8 +141,8 @@ export class Queue<
     path: string,
     body?: object,
   ): Promise<Response> {
-    const response = await BreezeRuntime.pluginFetch(
-      this.#options.instanceName,
+    const response = await this.runtime.pluginFetch(
+      this.options.instanceName,
       path,
       {
         method,
@@ -230,10 +228,10 @@ export class Queue<
     const endpoint = await this.buildUrl("/websocket");
 
     endpoint.search = new URLSearchParams({
-      queue: this.#queue,
+      queue: this.queue,
       size: bufferSize.toString(),
-      token: BreezeRuntime.generateToken({
-        plugin: this.#options.instanceName,
+      token: this.runtime.generateToken({
+        plugin: this.options.instanceName,
       }),
     }).toString();
 
@@ -241,10 +239,10 @@ export class Queue<
   }
 
   private buildUrl(path: string = "/") {
-    const plugin = BreezeRuntime.getPlugin(this.#options.instanceName);
+    const plugin = this.runtime.getPlugin(this.options.instanceName);
 
     if (!plugin) {
-      throw new Error(`plugin '${this.#options.instanceName}' does not exist`);
+      throw new Error(`plugin '${this.options.instanceName}' does not exist`);
     } else {
       return Promise.resolve(appendPath(plugin.endpoint, path));
     }
