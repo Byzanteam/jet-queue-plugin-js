@@ -7,12 +7,13 @@ jobs:
   publish:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Publish package
-        run: npx jsr publish
+      - uses: actions/setup-node@v3
+        with:
+          node-version: latest
+      - run: npm ci
+      - uses: JS-DevTools/npm-publish@v3
+        with:
+          access: public
+          token: ${{ secrets.NPM_AUTH_TOKEN }}
