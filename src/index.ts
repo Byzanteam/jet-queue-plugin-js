@@ -1,4 +1,4 @@
-import type * as _breeze from "@fvqzmp1h/breeze-js/types";
+import type * as _breeze from "@byzanteam/breeze-js/types";
 
 export { Queue } from "./queue.ts";
 export { QueueSubscriber } from "./queue_subscriber.ts";
