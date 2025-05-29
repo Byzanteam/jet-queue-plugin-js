@@ -9,7 +9,10 @@
   "compilerOptions": {
     "strict": true,
     "useUnknownInCatchVariables": true,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "types": [
+      "https://cdn.jsdelivr.net/gh/Byzanteam/breeze-js@0.5.0-alpha.0/types/global.d.ts"
+    ]
   },
   "exclude": [
     ".git"
