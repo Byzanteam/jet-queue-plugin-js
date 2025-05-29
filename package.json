@@ -1,0 +1,15 @@
+{
+  "name": "@fvqzmp1h/jet-queue-plugin-js",
+  "version": "0.1.1",
+  "scripts": {
+    "check": "deno task check",
+    "test": "deno task test"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@fvqzmp1h/breeze-js": "^0.1.10"
+  },
+  "license": "MIT"
+}

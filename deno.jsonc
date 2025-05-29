@@ -1,22 +1,10 @@
 {
-  "name": "@byzanteam/jet-queue-plugin-js",
-  "version": "0.4.2",
-  "license": "MIT",
-  "exports": {
-    ".": "./mod.ts",
-    "./testing": "./src/testing.ts"
-  },
+  // "name": "@byzanteam/jet-queue-plugin-js",
   "compilerOptions": {
     "strict": true,
     "useUnknownInCatchVariables": true,
-    "noImplicitOverride": true,
-    "types": [
-      "https://cdn.jsdelivr.net/gh/Byzanteam/breeze-js@0.5.0/types/global.d.ts"
-    ]
+    "noImplicitOverride": true
   },
-  "exclude": [
-    ".git"
-  ],
   "tasks": {
     "check": "deno fmt --check && deno lint && deno task check:types && deno task test",
     "check:types": "deno check **/*.ts",
