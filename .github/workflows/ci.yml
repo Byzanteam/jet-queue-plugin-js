@@ -25,6 +25,9 @@ jobs:
         with:
           deno-version: ${{ matrix.deno }}
 
+      - name: Install dependencies
+        run: deno install
+
       - name: Verify formatting
         run: deno fmt --check
 
