@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import type { Queue } from "./queue.ts";
+import type { Queue } from "./queue";
 
 type Stub = any;
 type ExpectedSpyCall = any;
