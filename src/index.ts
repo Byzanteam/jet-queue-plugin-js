@@ -1,7 +1,7 @@
 import type * as _breeze from "@byzanteam/breeze-js/types";
 
-export { Queue } from "./queue.ts";
-export { QueueSubscriber } from "./queue_subscriber.ts";
+export { Queue } from "./queue";
+export { QueueSubscriber } from "./queue_subscriber";
 export {
   type AckMessage,
   type EnqueueJobResponse,
@@ -14,4 +14,4 @@ export {
   type QueueJob,
   type QueueJobId,
   type QueueOptions,
-} from "./types.ts";
+} from "./types";

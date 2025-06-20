@@ -8,9 +8,9 @@ import type {
   QueueJob,
   QueueJobId,
   QueueOptions,
-} from "./types.ts";
-import { appendPath } from "./utils.ts";
-import { messagesStream } from "./ws-event-generator.ts";
+} from "./types";
+import { appendPath } from "./utils";
+import { messagesStream } from "./ws-event-generator";
 
 export class Queue<
   T extends Record<string, unknown> = Record<string, unknown>,
