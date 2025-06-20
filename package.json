@@ -1,9 +1,8 @@
 {
   "name": "@byzanteam/jet-queue-plugin-js",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "scripts": {
-    "build": "rollup -c rollup.config.mjs",
-    "prepublishOnly": "npm run build"
+    "build": "rollup -c rollup.config.mjs"
   },
   "exports": {
     ".": "./dist/index.js"
