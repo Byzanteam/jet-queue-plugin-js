@@ -3,7 +3,7 @@ export function appendPath(base: string, path: string = "/"): URL {
 
   url.pathname = [url.pathname, path]
     .join("/")
-    .replaceAll(/\//g, "/");
+    .replaceAll(/\/+/g, "/");
 
   return url;
 }
