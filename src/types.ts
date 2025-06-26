@@ -15,7 +15,7 @@ export interface QueueJob<T extends Record<string, unknown>> {
 
 export type EnqueueJobResponse = QueueJob<Record<string, unknown>>;
 
-interface UniqueOptions<T extends string> {
+export interface UniqueOptions<T extends string> {
   /** a list of fields to use for uniqueness calculations */
   fields: ReadonlyArray<"args" | "meta" | "queue">;
   /** a list of arg or meta keys to use for uniqueness calculations */
@@ -159,7 +159,7 @@ export interface AckMessage {
   payload: Array<AckMessagePayload>;
 }
 
-type AckMessagePayload =
+export type AckMessagePayload =
   | { id: QueueJobId; queue: string; code: "ok" }
   | { id: QueueJobId; queue: string; code: "error" | "cancel"; data: string }
   | { id: QueueJobId; queue: string; code: "discard"; data?: string }

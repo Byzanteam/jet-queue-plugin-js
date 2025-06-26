@@ -4,6 +4,7 @@ export { Queue } from "./queue";
 export { QueueSubscriber } from "./queue_subscriber";
 export {
   type AckMessage,
+  type AckMessagePayload,
   type EnqueueJobResponse,
   type EnqueueOptions,
   type JobsMessage,
@@ -14,4 +15,5 @@ export {
   type QueueJob,
   type QueueJobId,
   type QueueOptions,
+  type UniqueOptions,
 } from "./types";
