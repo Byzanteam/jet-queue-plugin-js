@@ -109,13 +109,18 @@ export async function* messagesStream<T>(
       commitResolver = resolve;
     });
 
-    await new Promise<void>((resolve) => {
-      beginResolver = resolve;
-    });
+    // Only park for the first event of a batch. If a previous batch left a
+    // remainder, skip the wait and flush it instead of blocking until the next
+    // message arrives.
+    if (0 === buffer.length) {
+      await new Promise<void>((resolve) => {
+        beginResolver = resolve;
+      });
 
-    beginResolver = undefined;
+      beginResolver = undefined;
 
-    if (shouldStop()) return;
+      if (shouldStop()) return;
+    }
 
     let batchTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
 

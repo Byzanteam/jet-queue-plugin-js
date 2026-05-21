@@ -55,6 +55,33 @@ Deno.test("messagesStream yields batched jobs", async () => {
   assertEquals(result.value, ["a", "b"]);
 });
 
+Deno.test("flushes the leftover of an overfull batch without a new message", async () => {
+  using time = new FakeTime();
+  const socket = createMockSocket();
+
+  const iterator = messagesStream<string>(socket as unknown as WebSocket, {
+    timeout: 5000,
+    batchSize: 2,
+    batchTimeout: 1000,
+    dataBuilder: (event) => [event.data],
+  })[Symbol.asyncIterator]();
+
+  const first = iterator.next();
+  socket.emit("open");
+  socket.emit("message", message("a"));
+  socket.emit("message", message("b"));
+  socket.emit("message", message("c"));
+
+  assertEquals((await first).value, ["a", "b"]);
+
+  // No further message arrives; the leftover "c" must flush on batchTimeout
+  // rather than blocking until the next message.
+  const second = iterator.next();
+  await time.tickAsync(1000);
+
+  assertEquals((await second).value, ["c"]);
+});
+
 Deno.test("clears the batch timer when commit wins the race", async () => {
   using _time = new FakeTime();
   const clearTimeoutSpy = spy(globalThis, "clearTimeout");
