@@ -91,7 +91,9 @@ export async function* messagesStream<T>(
     const clean = event.wasClean || event.code === 1000 ||
       event.code === 1001;
 
-    stop(clean ? undefined : new Error(`WebSocket closed (code ${event.code})`));
+    stop(
+      clean ? undefined : new Error(`WebSocket closed (code ${event.code})`),
+    );
   });
 
   // Throws on abnormal stop, signals the caller to `return` on clean stop.
