@@ -2,30 +2,36 @@ import { defineConfig } from "rollup";
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
 
+const tsPlugin = typescript({
+  module: "esnext",
+  moduleResolution: "bundler",
+  strict: true,
+  target: "esnext",
+});
+
 export default defineConfig([
   {
-    input: "src/index.ts",
+    input: ["src/index.ts", "src/testing.ts"],
     output: {
       dir: "dist",
       format: "esm",
     },
-    plugins: [
-      typescript({
-        module: "esnext",
-        moduleResolution: "bundler",
-        strict: true,
-        target: "esnext",
-      }),
-    ],
+    plugins: [tsPlugin],
   },
   {
     input: "src/index.ts",
     output: {
-      dir: "dist",
+      file: "dist/index.d.ts",
       format: "esm",
     },
-    plugins: [
-      dts(),
-    ],
+    plugins: [dts()],
+  },
+  {
+    input: "src/testing.ts",
+    output: {
+      file: "dist/testing.d.ts",
+      format: "esm",
+    },
+    plugins: [dts()],
   },
 ]);
