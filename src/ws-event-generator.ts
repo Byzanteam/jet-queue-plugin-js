@@ -30,16 +30,23 @@ export async function* messagesStream<T>(
     }
   }
 
+  let pingTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+
   socket.addEventListener("open", () => {
     (function ping() {
       if (pong) {
         pong = false;
         socket.send("ping");
-        setTimeout(ping, timeout);
+        pingTimeoutId = setTimeout(ping, timeout);
       } else {
         throw new Error("Ping timeout");
       }
     })();
+  });
+
+  socket.addEventListener("close", () => {
+    clearTimeout(pingTimeoutId);
+    pingTimeoutId = undefined;
   });
 
   socket.addEventListener("message", (event: MessageEvent<string>) => {
@@ -61,10 +68,14 @@ export async function* messagesStream<T>(
 
     beginResolver = undefined;
 
+    let batchTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
     await Promise.race([
-      new Promise<void>((resolve) => setTimeout(resolve, batchTimeout)),
+      new Promise<void>((resolve) => {
+        batchTimeoutId = setTimeout(resolve, batchTimeout);
+      }),
       commit,
     ]);
+    clearTimeout(batchTimeoutId);
 
     commitResolver = undefined;
 
