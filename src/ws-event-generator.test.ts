@@ -1,4 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
+import { assertSpyCalls, spy } from "@std/testing/mock";
 import { FakeTime } from "@std/testing/time";
 import { messagesStream } from "./ws-event-generator.ts";
 
@@ -52,6 +53,34 @@ Deno.test("messagesStream yields batched jobs", async () => {
 
   const result = await next;
   assertEquals(result.value, ["a", "b"]);
+});
+
+Deno.test("clears the batch timer when commit wins the race", async () => {
+  using _time = new FakeTime();
+  const clearTimeoutSpy = spy(globalThis, "clearTimeout");
+
+  try {
+    const socket = createMockSocket();
+    const iterator = messagesStream<string>(socket as unknown as WebSocket, {
+      timeout: 5000,
+      batchSize: 2,
+      batchTimeout: 1000,
+      dataBuilder: (event) => [event.data],
+    })[Symbol.asyncIterator]();
+
+    const next = iterator.next();
+    socket.emit("open");
+    socket.emit("message", message("a"));
+    socket.emit("message", message("b"));
+
+    const result = await next;
+    assertEquals(result.value, ["a", "b"]);
+
+    // batch timer must be cleared once commit (batchSize reached) wins the race
+    assertSpyCalls(clearTimeoutSpy, 1);
+  } finally {
+    clearTimeoutSpy.restore();
+  }
 });
 
 Deno.test("ping timeout closes the socket and throws", async () => {

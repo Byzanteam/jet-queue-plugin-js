@@ -98,10 +98,16 @@ export async function* messagesStream<T>(
 
     if (failure) throw failure;
 
+    let batchTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+
     await Promise.race([
-      new Promise<void>((resolve) => setTimeout(resolve, batchTimeout)),
+      new Promise<void>((resolve) => {
+        batchTimeoutId = setTimeout(resolve, batchTimeout);
+      }),
       commit,
     ]);
+
+    clearTimeout(batchTimeoutId);
 
     commitResolver = undefined;
 
