@@ -104,7 +104,7 @@ Deno.test("ping timeout closes the socket and throws", async () => {
   assertEquals(socket.closed, true);
 });
 
-Deno.test("socket close throws to crash the consumer", async () => {
+Deno.test("clean socket close ends the stream without throwing", async () => {
   using _time = new FakeTime();
   const socket = createMockSocket();
 
@@ -117,9 +117,28 @@ Deno.test("socket close throws to crash the consumer", async () => {
 
   const next = iterator.next();
   socket.emit("open");
-  socket.emit("close");
+  socket.emit("close", { wasClean: true, code: 1000 });
 
-  await assertRejects(() => next, Error, "WebSocket closed");
+  const result = await next;
+  assertEquals(result.done, true);
+});
+
+Deno.test("abnormal socket close throws to crash the consumer", async () => {
+  using _time = new FakeTime();
+  const socket = createMockSocket();
+
+  const iterator = messagesStream<string>(socket as unknown as WebSocket, {
+    timeout: 5000,
+    batchSize: 2,
+    batchTimeout: 1000,
+    dataBuilder: (event) => [event.data],
+  })[Symbol.asyncIterator]();
+
+  const next = iterator.next();
+  socket.emit("open");
+  socket.emit("close", { wasClean: false, code: 1006 });
+
+  await assertRejects(() => next, Error, "WebSocket closed (code 1006)");
 });
 
 Deno.test("socket error throws to crash the consumer", async () => {

@@ -18,33 +18,38 @@ export async function* messagesStream<T>(
   let beginResolver: (() => void) | undefined = undefined;
   let commitResolver: (() => void) | undefined = undefined;
 
-  // Set on any unrecoverable socket condition. The generator re-throws it from
-  // its own execution so the rejection propagates through the `for await`
-  // consumer up to the top-level `await listen(...)`, crashing the process so
-  // the runtime restarts it with a fresh connection. A bare `throw` inside a
-  // timer/event callback would not reach that chain and would instead leave a
-  // zombie connection: the socket stays open, the server keeps dispatching,
-  // but no jobs are ever acked.
+  // The stream stops once the socket can no longer deliver jobs. `failure`
+  // distinguishes the two cases:
+  //   - set    -> abnormal (ping timeout, error, unclean close). The generator
+  //               re-throws it so the rejection propagates through `for await`
+  //               up to the top-level `await listen(...)`, crashing the process
+  //               so the runtime restarts with a fresh connection.
+  //   - unset  -> clean shutdown. The generator returns and the consumer
+  //               finishes normally.
+  // Stopping from a timer/event callback only flips this flag and wakes the
+  // generator; the actual throw/return happens in the generator's own
+  // execution. A bare `throw` inside a callback would not reach the `for await`
+  // chain and would leave a zombie connection: socket open, server dispatching,
+  // no jobs acked.
+  let stopped = false;
   let failure: Error | undefined = undefined;
   let pingTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
 
-  function fail(error: Error) {
-    if (failure) return;
+  function stop(error?: Error) {
+    if (stopped) return;
+    stopped = true;
     failure = error;
 
     clearTimeout(pingTimeoutId);
-    socket.close();
+    if (error) socket.close();
 
-    // Wake whichever phase the generator is currently parked on so it can
-    // observe `failure` and throw immediately.
+    // Wake whichever phase the generator is parked on so it observes `stopped`.
     beginResolver?.();
     commitResolver?.();
   }
 
   function pushEvent(event: MessageEvent<string>) {
-    if (beginResolver) {
-      beginResolver();
-    }
+    beginResolver?.();
 
     buffer.push(...dataBuilder(event));
 
@@ -55,14 +60,14 @@ export async function* messagesStream<T>(
 
   socket.addEventListener("open", () => {
     (function ping() {
-      if (failure) return;
+      if (stopped) return;
 
       if (pong) {
         pong = false;
         socket.send("ping");
         pingTimeoutId = setTimeout(ping, timeout);
       } else {
-        fail(new Error("Ping timeout"));
+        stop(new Error("Ping timeout"));
       }
     })();
   });
@@ -76,15 +81,27 @@ export async function* messagesStream<T>(
   });
 
   socket.addEventListener("error", () => {
-    fail(new Error("WebSocket error"));
+    stop(new Error("WebSocket error"));
   });
 
-  socket.addEventListener("close", () => {
-    fail(new Error("WebSocket closed"));
+  socket.addEventListener("close", (event: CloseEvent) => {
+    // 1000 (normal) and 1001 (going away) are graceful shutdowns: stop without
+    // an error so the consumer finishes. Any other code is abnormal and stops
+    // with an error so the process crashes and the runtime reconnects.
+    const clean = event.wasClean || event.code === 1000 ||
+      event.code === 1001;
+
+    stop(clean ? undefined : new Error(`WebSocket closed (code ${event.code})`));
   });
+
+  // Throws on abnormal stop, signals the caller to `return` on clean stop.
+  function shouldStop(): boolean {
+    if (failure) throw failure;
+    return stopped;
+  }
 
   while (true) {
-    if (failure) throw failure;
+    if (shouldStop()) return;
 
     const commit = new Promise<void>((resolve) => {
       commitResolver = resolve;
@@ -96,7 +113,7 @@ export async function* messagesStream<T>(
 
     beginResolver = undefined;
 
-    if (failure) throw failure;
+    if (shouldStop()) return;
 
     let batchTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
 
@@ -111,7 +128,7 @@ export async function* messagesStream<T>(
 
     commitResolver = undefined;
 
-    if (failure) throw failure;
+    if (shouldStop()) return;
 
     if (0 !== buffer.length) {
       yield buffer.splice(0, Math.min(buffer.length, batchSize));
