@@ -15,8 +15,17 @@ export async function* messagesStream<T>(
 
   let pong = true;
 
-  let beginResolver: (() => void) | undefined = undefined;
-  let commitResolver: (() => void) | undefined = undefined;
+  // A promise the generator parks on, paired with the resolver an event
+  // callback uses to wake it.
+  type Deferred = { promise: Promise<void>; resolve: () => void };
+  function defer(): Deferred {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  let begin: Deferred | undefined = undefined;
+  let commit: Deferred | undefined = undefined;
 
   // The stream stops once the socket can no longer deliver jobs. `failure`
   // distinguishes the two cases:
@@ -44,17 +53,17 @@ export async function* messagesStream<T>(
     if (error) socket.close();
 
     // Wake whichever phase the generator is parked on so it observes `stopped`.
-    beginResolver?.();
-    commitResolver?.();
+    begin?.resolve();
+    commit?.resolve();
   }
 
   function pushEvent(event: MessageEvent<string>) {
-    beginResolver?.();
+    begin?.resolve();
 
     buffer.push(...dataBuilder(event));
 
-    if (commitResolver && buffer.length >= batchSize) {
-      commitResolver();
+    if (commit && buffer.length >= batchSize) {
+      commit.resolve();
     }
   }
 
@@ -105,19 +114,15 @@ export async function* messagesStream<T>(
   while (true) {
     if (shouldStop()) return;
 
-    const commit = new Promise<void>((resolve) => {
-      commitResolver = resolve;
-    });
+    commit = defer();
 
     // Only park for the first event of a batch. If a previous batch left a
     // remainder, skip the wait and flush it instead of blocking until the next
     // message arrives.
     if (0 === buffer.length) {
-      await new Promise<void>((resolve) => {
-        beginResolver = resolve;
-      });
-
-      beginResolver = undefined;
+      begin = defer();
+      await begin.promise;
+      begin = undefined;
 
       if (shouldStop()) return;
     }
@@ -128,12 +133,12 @@ export async function* messagesStream<T>(
       new Promise<void>((resolve) => {
         batchTimeoutId = setTimeout(resolve, batchTimeout);
       }),
-      commit,
+      commit.promise,
     ]);
 
     clearTimeout(batchTimeoutId);
 
-    commitResolver = undefined;
+    commit = undefined;
 
     if (shouldStop()) return;
 
