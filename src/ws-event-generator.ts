@@ -18,6 +18,29 @@ export async function* messagesStream<T>(
   let beginResolver: (() => void) | undefined = undefined;
   let commitResolver: (() => void) | undefined = undefined;
 
+  // Set on any unrecoverable socket condition. The generator re-throws it from
+  // its own execution so the rejection propagates through the `for await`
+  // consumer up to the top-level `await listen(...)`, crashing the process so
+  // the runtime restarts it with a fresh connection. A bare `throw` inside a
+  // timer/event callback would not reach that chain and would instead leave a
+  // zombie connection: the socket stays open, the server keeps dispatching,
+  // but no jobs are ever acked.
+  let failure: Error | undefined = undefined;
+  let pingTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+
+  function fail(error: Error) {
+    if (failure) return;
+    failure = error;
+
+    clearTimeout(pingTimeoutId);
+    socket.close();
+
+    // Wake whichever phase the generator is currently parked on so it can
+    // observe `failure` and throw immediately.
+    beginResolver?.();
+    commitResolver?.();
+  }
+
   function pushEvent(event: MessageEvent<string>) {
     if (beginResolver) {
       beginResolver();
@@ -32,12 +55,14 @@ export async function* messagesStream<T>(
 
   socket.addEventListener("open", () => {
     (function ping() {
+      if (failure) return;
+
       if (pong) {
         pong = false;
         socket.send("ping");
-        setTimeout(ping, timeout);
+        pingTimeoutId = setTimeout(ping, timeout);
       } else {
-        throw new Error("Ping timeout");
+        fail(new Error("Ping timeout"));
       }
     })();
   });
@@ -50,7 +75,17 @@ export async function* messagesStream<T>(
     }
   });
 
+  socket.addEventListener("error", () => {
+    fail(new Error("WebSocket error"));
+  });
+
+  socket.addEventListener("close", () => {
+    fail(new Error("WebSocket closed"));
+  });
+
   while (true) {
+    if (failure) throw failure;
+
     const commit = new Promise<void>((resolve) => {
       commitResolver = resolve;
     });
@@ -61,12 +96,16 @@ export async function* messagesStream<T>(
 
     beginResolver = undefined;
 
+    if (failure) throw failure;
+
     await Promise.race([
       new Promise<void>((resolve) => setTimeout(resolve, batchTimeout)),
       commit,
     ]);
 
     commitResolver = undefined;
+
+    if (failure) throw failure;
 
     if (0 !== buffer.length) {
       yield buffer.splice(0, Math.min(buffer.length, batchSize));

@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "test": "deno test src/",
+    "check": "deno check src/"
+  },
+  "imports": {
+    "@std/assert": "https://deno.land/std@0.224.0/assert/mod.ts",
+    "@std/testing/time": "https://deno.land/std@0.224.0/testing/time.ts"
+  }
+}
