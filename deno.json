@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "test": "deno test src/",
+    "test": "deno test tests/",
     "check": "deno check src/"
   },
   "imports": {

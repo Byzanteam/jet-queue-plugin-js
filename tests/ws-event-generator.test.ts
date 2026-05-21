@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { assertSpyCalls, spy } from "@std/testing/mock";
 import { FakeTime } from "@std/testing/time";
-import { messagesStream } from "./ws-event-generator.ts";
+import { messagesStream } from "../src/ws-event-generator.ts";
 
 type MockSocket = {
   addEventListener: (event: string, handler: (e: unknown) => void) => void;
